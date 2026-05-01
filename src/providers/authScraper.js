@@ -41,6 +41,7 @@ class AllianceAuthProvider extends BaseProvider {
     this._limit  = limiter(AUTH_CONCURRENCY);
     this._client = axios.create({
       baseURL: BASE_URL,
+      timeout: 20000,
       headers: {
         'User-Agent':       USER_AGENT,
         'Accept':           'text/html,application/json',
@@ -56,7 +57,18 @@ class AllianceAuthProvider extends BaseProvider {
 
   async _get(path, params) {
     await sleep(REQUEST_DELAY);
-    const r = await this._client.get(path, { params });
+    let r;
+    try {
+      r = await this._client.get(path, { params });
+    } catch (e) {
+      if (e.code === 'ECONNABORTED' || e.code === 'ETIMEDOUT') {
+        throw new Error(`Alliance Auth timed out (${BASE_URL}). Check that the server is reachable.`);
+      }
+      if (e.code === 'ECONNREFUSED' || e.code === 'ENOTFOUND') {
+        throw new Error(`Cannot reach Alliance Auth (${BASE_URL}): ${e.code}`);
+      }
+      throw e;
+    }
     const url = r.request?.path || '';
     if (r.status === 302 || url.includes('login')) {
       throw new Error('Auth failed — session cookie has expired. Re-copy from Chrome DevTools.');
