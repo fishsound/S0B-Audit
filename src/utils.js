@@ -33,16 +33,42 @@ function loadEnvFile(envFile) {
   return env;
 }
 
-/** Parse sessionid and csrftoken out of a saved Auth.env. */
+/**
+ * Parse sessionid and csrftoken for the Alliance Auth scraper.
+ * Priority: process.env.SESSION_COOKIE (Railway / prod) → Auth.env file (local dev).
+ */
 function loadCredentials(envFile) {
-  const env = loadEnvFile(envFile);
+  const parse = (cookie) => {
+    const sid  = cookie.match(/sessionid=([^;\s]+)/)?.[1] || '';
+    const csrf = cookie.match(/csrftoken=([^;\s]+)/)?.[1] || '';
+    return { sid, csrf };
+  };
+
+  // 1. Environment variable (Railway / any 12-factor deployment)
+  if (process.env.SESSION_COOKIE) {
+    const { sid, csrf } = parse(process.env.SESSION_COOKIE);
+    if (sid && csrf) return { sessionId: sid, csrfToken: csrf };
+  }
+
+  // 2. Auth.env file (local development)
+  const env    = loadEnvFile(envFile);
   const cookie = env['SESSION_COOKIE'] || '';
-  const sidM  = cookie.match(/sessionid=([^;\s]+)/);
-  const csrfM = cookie.match(/csrftoken=([^;\s]+)/);
-  const sid  = sidM?.[1]  || env['SESSIONID']  || '';
-  const csrf = csrfM?.[1] || env['CSRFTOKEN']  || '';
-  if (!sid || !csrf) throw new Error('Credentials missing or incomplete — save them via the UI.');
-  return { sessionId: sid, csrfToken: csrf };
+  const { sid, csrf } = parse(cookie);
+  const finalSid  = sid  || env['SESSIONID']  || '';
+  const finalCsrf = csrf || env['CSRFTOKEN']  || '';
+  if (!finalSid || !finalCsrf)
+    throw new Error('Alliance Auth credentials not configured. Set SESSION_COOKIE env var or save via the UI.');
+  return { sessionId: finalSid, csrfToken: finalCsrf };
 }
 
-module.exports = { sleep, limiter, loadEnvFile, loadCredentials };
+/** Returns true when credentials come from the environment (Railway mode). */
+function credentialsFromEnv() {
+  if (!process.env.SESSION_COOKIE) return false;
+  const { sid, csrf } = (() => {
+    const c = process.env.SESSION_COOKIE;
+    return { sid: c.match(/sessionid=([^;\s]+)/)?.[1], csrf: c.match(/csrftoken=([^;\s]+)/)?.[1] };
+  })();
+  return !!(sid && csrf);
+}
+
+module.exports = { sleep, limiter, loadEnvFile, loadCredentials, credentialsFromEnv };

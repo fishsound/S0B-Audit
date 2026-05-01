@@ -30,19 +30,111 @@
     flex-direction: column;
   }
 
+  /* ── Login screen ── */
+  #login-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .login-box {
+    background: var(--bg-mid);
+    border: 1px solid var(--header);
+    border-radius: 6px;
+    padding: 48px 56px;
+    text-align: center;
+    max-width: 420px;
+    width: 90%;
+  }
+  .login-box h1 {
+    color: var(--cyan);
+    font-size: 20px;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .login-box h2 {
+    color: var(--gold);
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    font-weight: normal;
+    margin-bottom: 28px;
+  }
+  .login-box p {
+    color: var(--grey);
+    font-size: 11px;
+    line-height: 1.6;
+    margin-bottom: 6px;
+  }
+  .btn-eve {
+    display: inline-block;
+    margin-top: 24px;
+    padding: 11px 28px;
+    background: transparent;
+    border: 2px solid var(--cyan);
+    border-radius: 4px;
+    color: var(--cyan);
+    font-family: inherit;
+    font-weight: bold;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    cursor: pointer;
+  }
+  .btn-eve:hover { background: var(--cyan); color: var(--bg); }
+
   /* ── Banner ── */
   .banner {
     background: var(--bg);
     border-bottom: 2px solid var(--header);
-    padding: 14px 20px 10px;
-    text-align: center;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
   }
-  .banner h1 {
+  .banner-title { text-align: center; flex: 1; }
+  .banner-title h1 {
     color: var(--cyan);
-    font-size: 22px;
+    font-size: 20px;
     letter-spacing: 1px;
   }
-  .banner p { color: var(--grey); font-size: 11px; margin-top: 3px; }
+  .banner-title p { color: var(--grey); font-size: 11px; margin-top: 2px; }
+
+  /* ── User info ── */
+  .user-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    min-width: 180px;
+    justify-content: flex-end;
+  }
+  .role-badge {
+    font-size: 9px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .role-member  { background: var(--header); color: var(--cyan);  border: 1px solid var(--cyan); }
+  .role-officer { background: #014d40;       color: var(--teal);  border: 1px solid var(--teal); }
+  .role-admin   { background: #3d2f00;       color: var(--gold);  border: 1px solid var(--gold); }
+  .logout-link {
+    color: var(--grey);
+    text-decoration: none;
+    font-size: 10px;
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    transition: color 0.1s, border-color 0.1s;
+  }
+  .logout-link:hover { color: var(--red); border-color: var(--red); }
 
   /* ── Layout ── */
   .layout {
@@ -100,6 +192,7 @@
     transition: border-color 0.15s;
   }
   input:focus, select:focus { border-color: var(--cyan); }
+  input:disabled, select:disabled { opacity: 0.45; cursor: not-allowed; }
   select option { background: var(--bg-light); }
 
   .row { display: flex; gap: 6px; align-items: center; }
@@ -204,10 +297,25 @@
 </head>
 <body>
 
+<!-- Login screen — shown by default, hidden after auth check -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>◈  SONS of BANE  ◈</h1>
+    <h2>ALLIANCE AUDIT TOOL</h2>
+    <p>Sign in with your EVE Online character.</p>
+    <p>Access is restricted to SONS of BANE alliance members.</p>
+    <a href="/auth/login" class="btn-eve">Sign in with EVE Online</a>
+  </div>
+</div>
+
 <!-- Banner -->
 <div class="banner">
-  <h1>◈  SONS of BANE  ·  ALLIANCE AUDIT TOOL  ◈</h1>
-  <p>EVE Online  ·  Fleet Activity &amp; Compliance Reporting</p>
+  <div style="min-width:180px"></div>
+  <div class="banner-title">
+    <h1>◈  SONS of BANE  ·  ALLIANCE AUDIT TOOL  ◈</h1>
+    <p>EVE Online  ·  Fleet Activity &amp; Compliance Reporting</p>
+  </div>
+  <div id="user-info" class="user-bar"></div>
 </div>
 
 <!-- Main layout -->
@@ -216,20 +324,22 @@
   <!-- Sidebar -->
   <aside class="sidebar">
 
-    <!-- Credentials -->
-    <div class="card">
+    <!-- Credentials (admin only, hidden when creds come from env) -->
+    <div class="card" id="card-creds">
       <div class="card-header">SESSION CREDENTIALS</div>
       <div class="card-body">
-        <div>
-          <label>Session ID (sessionid= from Chrome DevTools → Cookies)</label>
-          <input type="password" id="session-id" placeholder="paste session id…" autocomplete="off"/>
-        </div>
-        <div>
-          <label>CSRF Token (csrftoken= value)</label>
-          <input type="password" id="csrf-token" placeholder="paste csrf token…" autocomplete="off"/>
-        </div>
-        <div class="row">
-          <button class="btn-teal" onclick="saveCredentials()">💾 Save Credentials</button>
+        <div id="cred-fields">
+          <div>
+            <label>Session ID (sessionid= from Chrome DevTools → Cookies)</label>
+            <input type="password" id="session-id" placeholder="paste session id…" autocomplete="off"/>
+          </div>
+          <div>
+            <label>CSRF Token (csrftoken= value)</label>
+            <input type="password" id="csrf-token" placeholder="paste csrf token…" autocomplete="off"/>
+          </div>
+          <div class="row">
+            <button class="btn-teal" id="btn-save-creds" onclick="saveCredentials()">💾 Save Credentials</button>
+          </div>
         </div>
         <div id="cred-status" class="status-badge"></div>
       </div>
@@ -257,8 +367,8 @@
       </div>
     </div>
 
-    <!-- Output -->
-    <div class="card">
+    <!-- Output / cache (admin only) -->
+    <div class="card" id="card-cache">
       <div class="card-header">OUTPUT</div>
       <div class="card-body">
         <div id="cache-stats" class="status-badge">—</div>
@@ -297,9 +407,48 @@ let _corps    = [];
 let _running  = false;
 let _reportFile = null;
 let _ws       = null;
+let _user     = null;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+async function apiFetch(url, opts) {
+  const r = await fetch(url, opts);
+  if (r.status === 401) {
+    logLine('[!] Session expired — redirecting to login…', 'gold');
+    setTimeout(() => { window.location.href = '/auth/login'; }, 1500);
+    return null;
+  }
+  return r;
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-(function init() {
+(async function init() {
+  const res  = await fetch('/auth/me');
+  const user = await res.json();
+
+  if (!user.authenticated) {
+    // Login screen is already displayed by default
+    return;
+  }
+
+  // Hide login overlay, app is already in DOM
+  document.getElementById('login-screen').style.display = 'none';
+  _user = user;
+
+  // Render user info bar
+  document.getElementById('user-info').innerHTML =
+    `<strong style="color:var(--cyan)">${escHtml(user.charName)}</strong>` +
+    `<span style="color:var(--grey);font-size:10px">${escHtml(user.corpName)}</span>` +
+    `<span class="role-badge role-${user.role}">${user.role}</span>` +
+    `<a href="/auth/logout" class="logout-link">logout</a>`;
+
   // Populate year selector
   const sel = document.getElementById('year-select');
   const yr  = new Date().getFullYear();
@@ -309,18 +458,35 @@ let _ws       = null;
     sel.appendChild(o);
   }
 
-  // Check saved credentials
-  fetch('/api/config/credentials')
-    .then(r => r.json())
-    .then(d => {
-      if (d.configured) {
-        setBadge('cred-status', '✓ Credentials loaded from Auth.env', 'ok');
-      } else {
-        setBadge('cred-status', '⚠ No credentials saved — paste and save above', 'err');
-      }
-    });
+  // Role-based UI gating
+  if (user.role !== 'admin') {
+    document.getElementById('card-cache').style.display    = 'none';
+    document.getElementById('btn-alliance').style.display  = 'none';
+  }
+  // Credentials card: admin only, and only when NOT supplied via env var
+  if (user.role !== 'admin' || user.credFromEnv) {
+    document.getElementById('card-creds').style.display = 'none';
+  }
 
-  refreshCache();
+  // Admin-specific init
+  if (user.role === 'admin') {
+    if (user.credFromEnv) {
+      setBadge('cred-status', '✓ Credentials loaded from environment variable', 'ok');
+      document.getElementById('cred-fields').style.display = 'none';
+    } else {
+      apiFetch('/api/config/credentials')
+        .then(r => r && r.json())
+        .then(d => {
+          if (!d) return;
+          if (d.configured) {
+            setBadge('cred-status', '✓ Credentials loaded from Auth.env', 'ok');
+          } else {
+            setBadge('cred-status', '⚠ No credentials saved — paste and save above', 'err');
+          }
+        });
+    }
+    refreshCache();
+  }
 })();
 
 // ── Credentials ───────────────────────────────────────────────────────────────
@@ -330,16 +496,18 @@ async function saveCredentials() {
   if (!sid || !csrf) {
     setBadge('cred-status', '! Both fields required', 'err'); return;
   }
-  const r = await fetch('/api/config/credentials', {
+  const r = await apiFetch('/api/config/credentials', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({session_id: sid, csrf_token: csrf}),
   });
+  if (!r) return;
   if (r.ok) {
     setBadge('cred-status', '✓ Saved to Auth.env', 'ok');
     logLine('[session] Credentials saved.', 'teal');
   } else {
-    setBadge('cred-status', '! Save failed', 'err');
+    const e = await r.json();
+    setBadge('cred-status', `! ${e.detail || 'Save failed'}`, 'err');
   }
 }
 
@@ -348,19 +516,32 @@ async function loadCorps() {
   status('Loading corps from SONS of BANE…');
   logLine('[↓] Fetching alliance corp list…', 'cyan');
   try {
-    const r = await fetch('/api/corps');
+    const r = await apiFetch('/api/corps');
+    if (!r) return;
     if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
     _corps = await r.json();
     const sel = document.getElementById('corp-select');
     sel.innerHTML = '';
-    _corps.forEach(c => {
+
+    // Members see only their own corp; officers and admins see all
+    let visible = _corps;
+    if (_user?.role === 'member') {
+      visible = _corps.filter(c => String(c.id) === String(_user.corpId));
+      if (visible.length === 0) {
+        logLine('[!] Your corporation is not in the alliance corp list — contact an officer.', 'red');
+        status('Corp not found in alliance list.');
+        return;
+      }
+    }
+
+    visible.forEach(c => {
       const o = document.createElement('option');
       o.value = JSON.stringify(c); o.textContent = c.name;
       sel.appendChild(o);
     });
     logLine(`[✓] Found ${_corps.length} corps in SONS of BANE.`, 'green');
-    _corps.forEach(c => logLine(`    ${c.name}  (${c.id})`, 'grey'));
-    status(`Loaded ${_corps.length} corps.`);
+    visible.forEach(c => logLine(`    ${c.name}  (${c.id})`, 'grey'));
+    status(`Loaded ${visible.length} corp(s).`);
   } catch(e) {
     logLine(`[!] ${e.message}`, 'red');
     status('Failed to load corps.');
@@ -378,11 +559,12 @@ async function runCorp() {
   logDivider();
   logLine(`[▶] Corp audit: ${corp.name}  (${year})`, 'cyan');
 
-  const r = await fetch('/api/audit/corp', {
+  const r = await apiFetch('/api/audit/corp', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({corp_id: corp.id, corp_name: corp.name, year}),
   });
+  if (!r) return;
   if (!r.ok) { const e = await r.json(); logLine(`[!] ${e.detail}`, 'red'); return; }
   const {job_id} = await r.json();
   connectWs(job_id);
@@ -394,11 +576,12 @@ async function runAlliance() {
   logDivider();
   logLine(`[★] Alliance-wide audit  (${year})`, 'gold');
 
-  const r = await fetch('/api/audit/alliance', {
+  const r = await apiFetch('/api/audit/alliance', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({year}),
   });
+  if (!r) return;
   if (!r.ok) { const e = await r.json(); logLine(`[!] ${e.detail}`, 'red'); return; }
   const {job_id} = await r.json();
   connectWs(job_id);
@@ -416,7 +599,7 @@ function connectWs(jobId) {
     if (msg.done) {
       setRunning(false);
       if (msg.file) showDownload(msg.file);
-      refreshCache();
+      if (_user?.role === 'admin') refreshCache();
       return;
     }
     if (msg.msg) logLine(msg.msg, msg.tag || 'white');
@@ -440,9 +623,10 @@ function downloadReport() {
   if (_reportFile) window.open(`/api/reports/${encodeURIComponent(_reportFile)}`);
 }
 
-// ── Cache ─────────────────────────────────────────────────────────────────────
+// ── Cache (admin only) ────────────────────────────────────────────────────────
 async function refreshCache() {
-  const r = await fetch('/api/cache/stats');
+  const r = await apiFetch('/api/cache/stats');
+  if (!r) return;
   const s = await r.json();
   const el = document.getElementById('cache-stats');
   if (s.count === 0) { el.textContent = 'Cache empty'; return; }
@@ -450,7 +634,8 @@ async function refreshCache() {
 }
 
 async function clearCache() {
-  const r = await fetch('/api/cache/clear', {method: 'DELETE'});
+  const r = await apiFetch('/api/cache/clear', {method: 'DELETE'});
+  if (!r) return;
   const s = await r.json();
   logLine(`[🗑] Cache cleared — ${s.cleared} entries removed.`, 'gold');
   refreshCache();

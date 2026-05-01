@@ -9,6 +9,7 @@ const { REPORTS_DIR, ENV_FILE }        = require('../config');
 const { AllianceAuthProvider, ESIProvider, EXTRA_PROVIDERS } = require('../providers');
 const { buildCorpPdf, buildAlliancePdf } = require('../report/pdf');
 const { loadCredentials } = require('../utils');
+const { requireMember, requireAdmin } = require('../middleware');
 
 // ── Job registry ──────────────────────────────────────────────────────────────
 // Each job: { messages: [], done: false, resultFile: null }
@@ -31,7 +32,7 @@ function today() {
 module.exports = (app) => {
 
   // ── REST: list corps ────────────────────────────────────────────────────────
-  app.get('/api/corps', async (req, res) => {
+  app.get('/api/corps', requireMember, async (req, res) => {
     try {
       const { sessionId, csrfToken } = loadCredentials(ENV_FILE);
       const auth  = new AllianceAuthProvider(sessionId, csrfToken);
@@ -44,10 +45,15 @@ module.exports = (app) => {
   });
 
   // ── REST: start corp audit ──────────────────────────────────────────────────
-  app.post('/api/audit/corp', async (req, res) => {
+  app.post('/api/audit/corp', requireMember, async (req, res) => {
     const { corp_id, corp_name, year = new Date().getFullYear() } = req.body;
     if (!corp_id || !corp_name)
       return res.status(400).json({ detail: 'corp_id and corp_name are required.' });
+
+    // Members can only audit their own corporation
+    const user = req.session.user;
+    if (user.role === 'member' && String(corp_id) !== String(user.corpId))
+      return res.status(403).json({ detail: 'Members can only audit their own corporation.' });
 
     let auth, esi;
     try {
@@ -81,7 +87,7 @@ module.exports = (app) => {
   });
 
   // ── REST: start alliance audit ──────────────────────────────────────────────
-  app.post('/api/audit/alliance', async (req, res) => {
+  app.post('/api/audit/alliance', requireAdmin, async (req, res) => {
     const { year = new Date().getFullYear() } = req.body;
 
     let auth, esi;
@@ -116,7 +122,7 @@ module.exports = (app) => {
   });
 
   // ── REST: download report ───────────────────────────────────────────────────
-  app.get('/api/reports/:filename', (req, res) => {
+  app.get('/api/reports/:filename', requireMember, (req, res) => {
     const fname = req.params.filename;
     if (!fname.endsWith('.pdf') || fname.includes('..'))
       return res.status(400).json({ detail: 'Invalid filename.' });
