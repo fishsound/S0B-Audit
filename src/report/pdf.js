@@ -5,6 +5,14 @@ const path    = require('path');
 const PDFDoc  = require('pdfkit');
 const { MONTH_ABBRS } = require('../config');
 
+// DejaVu Sans has full Unicode coverage (◈ ★ ◆ ▷ ○ etc.).
+// Helvetica (built-in) only covers WinAnsi and silently corrupts those glyphs.
+const FONT_DIR  = '/usr/share/fonts/truetype/dejavu';
+const FONT      = 'DejaVuSans';
+const FONT_BOLD = 'DejaVuSans-Bold';
+const FONT_PATH      = path.join(FONT_DIR, 'DejaVuSans.ttf');
+const FONT_BOLD_PATH = path.join(FONT_DIR, 'DejaVuSans-Bold.ttf');
+
 // ── Palette ───────────────────────────────────────────────────────────────────
 const C = {
   BG_DARK:   '#0D1117',
@@ -70,7 +78,7 @@ function drawRow(doc, cells, colWidths, x, y, rowH, isHeader, rowIdx) {
     const align = (typeof cell === 'object' && cell.align) ? cell.align : 'center';
 
     doc.save()
-       .font(bold ? 'Helvetica-Bold' : 'Helvetica')
+       .font(bold ? FONT_BOLD : FONT)
        .fontSize(FONT_SIZE)
        .fillColor(color)
        .text(text, cx + 2, y + Math.max(1, (rowH - FONT_SIZE) / 2), {
@@ -131,12 +139,12 @@ function drawTable(doc, rows, colWidths, x, startY) {
 function drawTitle(doc, title, subtitle, y) {
   const pw = doc.page.width;
   doc.save()
-     .font('Helvetica-Bold').fontSize(TITLE_SIZE).fillColor(C.CYAN)
+     .font(FONT_BOLD).fontSize(TITLE_SIZE).fillColor(C.CYAN)
      .text(title, MARGIN, y, { width: pw - 2 * MARGIN, align: 'center', lineBreak: false })
      .restore();
   y += TITLE_SIZE + 4;
   doc.save()
-     .font('Helvetica').fontSize(SUB_SIZE).fillColor(C.GREY)
+     .font(FONT).fontSize(SUB_SIZE).fillColor(C.GREY)
      .text(subtitle, MARGIN, y, { width: pw - 2 * MARGIN, align: 'center', lineBreak: false })
      .restore();
   return y + SUB_SIZE + 10;
@@ -237,6 +245,8 @@ function makePdf(outPath, title) {
     size: 'A4', layout: 'landscape', margin: MARGIN,
     info: { Title: title, Author: 'SoB Audit Tool', Creator: 'SoB-Audit-Tool/2.0' },
   });
+  doc.registerFont(FONT,      FONT_PATH);
+  doc.registerFont(FONT_BOLD, FONT_BOLD_PATH);
   doc.on('pageAdded', () => {
     doc.save().rect(0, 0, doc.page.width, doc.page.height).fill(C.BG_DARK).restore();
   });
@@ -328,7 +338,7 @@ async function buildCorpPdf(corpName, members, year, outPath) {
   y = drawTable(doc, rows, colW, MARGIN, y);
 
   y += 6;
-  doc.save().font('Helvetica').fontSize(6).fillColor(C.GREY)
+  doc.save().font(FONT).fontSize(6).fillColor(C.GREY)
      .text(
        'IN ALLIANCE = time since character joined corp OR corp joined SoB, whichever is more recent  ·  ' +
        'Data: Alliance Auth (Member Audit + AFAT) + ESI',
