@@ -6,7 +6,11 @@ Auth.env
 reports/
 .cache/
 
-# Python
+# Node
+node_modules/
+npm-debug.log*
+
+# Python (legacy — original scripts kept for reference)
 __pycache__/
 *.py[cod]
 *.egg-info/
