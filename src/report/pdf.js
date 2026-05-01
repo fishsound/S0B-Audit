@@ -7,11 +7,11 @@ const { MONTH_ABBRS } = require('../config');
 
 // DejaVu Sans has full Unicode coverage (◈ ★ ◆ ▷ ○ etc.).
 // Helvetica (built-in) only covers WinAnsi and silently corrupts those glyphs.
-const FONT_DIR  = '/usr/share/fonts/truetype/dejavu';
+// Fonts are bundled in src/fonts/ so they're available on any deployment target.
 const FONT      = 'DejaVuSans';
 const FONT_BOLD = 'DejaVuSans-Bold';
-const FONT_PATH      = path.join(FONT_DIR, 'DejaVuSans.ttf');
-const FONT_BOLD_PATH = path.join(FONT_DIR, 'DejaVuSans-Bold.ttf');
+const FONT_PATH      = path.join(__dirname, '../fonts/DejaVuSans.ttf');
+const FONT_BOLD_PATH = path.join(__dirname, '../fonts/DejaVuSans-Bold.ttf');
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const C = {
