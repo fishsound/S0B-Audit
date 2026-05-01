@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>◈ SONS of BANE · Alliance Audit Tool ◈</title>
+<style>
+  :root {
+    --bg:      #0D1117;
+    --bg-mid:  #161B22;
+    --bg-light:#1F2937;
+    --cyan:    #00BFFF;
+    --teal:    #00E5CC;
+    --gold:    #FFD700;
+    --red:     #C0392B;
+    --green:   #27AE60;
+    --grey:    #8B949E;
+    --white:   #FFFFFF;
+    --header:  #0A3D62;
+    --border:  #2D3748;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Calibri', 'Segoe UI', sans-serif;
+    font-size: 13px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Login screen ── */
+  #login-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .login-box {
+    background: var(--bg-mid);
+    border: 1px solid var(--header);
+    border-radius: 6px;
+    padding: 48px 56px;
+    text-align: center;
+    max-width: 420px;
+    width: 90%;
+  }
+  .login-box h1 {
+    color: var(--cyan);
+    font-size: 20px;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .login-box h2 {
+    color: var(--gold);
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    font-weight: normal;
+    margin-bottom: 28px;
+  }
+  .login-box p {
+    color: var(--grey);
+    font-size: 11px;
+    line-height: 1.6;
+    margin-bottom: 6px;
+  }
+  .btn-eve {
+    display: inline-block;
+    margin-top: 24px;
+    padding: 11px 28px;
+    background: transparent;
+    border: 2px solid var(--cyan);
+    border-radius: 4px;
+    color: var(--cyan);
+    font-family: inherit;
+    font-weight: bold;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    cursor: pointer;
+  }
+  .btn-eve:hover { background: var(--cyan); color: var(--bg); }
+
+  /* ── Banner ── */
+  .banner {
+    background: var(--bg);
+    border-bottom: 2px solid var(--header);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .banner-title { text-align: center; flex: 1; }
+  .banner-title h1 {
+    color: var(--cyan);
+    font-size: 20px;
+    letter-spacing: 1px;
+  }
+  .banner-title p { color: var(--grey); font-size: 11px; margin-top: 2px; }
+
+  /* ── User info ── */
+  .user-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    min-width: 180px;
+    justify-content: flex-end;
+  }
+  .role-badge {
+    font-size: 9px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .role-member  { background: var(--header); color: var(--cyan);  border: 1px solid var(--cyan); }
+  .role-officer { background: #014d40;       color: var(--teal);  border: 1px solid var(--teal); }
+  .role-admin   { background: #3d2f00;       color: var(--gold);  border: 1px solid var(--gold); }
+  .logout-link {
+    color: var(--grey);
+    text-decoration: none;
+    font-size: 10px;
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    transition: color 0.1s, border-color 0.1s;
+  }
+  .logout-link:hover { color: var(--red); border-color: var(--red); }
+
+  /* ── Layout ── */
+  .layout {
+    display: flex;
+    flex: 1;
+    gap: 0;
+    overflow: hidden;
+  }
+  .sidebar {
+    width: 340px;
+    min-width: 280px;
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .log-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Section cards ── */
+  .card {
+    background: var(--bg-mid);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .card-header {
+    background: var(--header);
+    color: var(--cyan);
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    padding: 6px 10px;
+  }
+  .card-body { padding: 10px; display: flex; flex-direction: column; gap: 7px; }
+
+  /* ── Form elements ── */
+  label { color: var(--grey); font-size: 10px; display: block; margin-bottom: 2px; }
+  input[type="text"], input[type="password"], select {
+    width: 100%;
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--white);
+    font-size: 12px;
+    padding: 5px 8px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus { border-color: var(--cyan); }
+  input:disabled, select:disabled { opacity: 0.45; cursor: not-allowed; }
+  select option { background: var(--bg-light); }
+
+  .row { display: flex; gap: 6px; align-items: center; }
+  .row input, .row select { flex: 1; }
+
+  /* ── Buttons ── */
+  button {
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    font-size: 12px;
+    padding: 6px 14px;
+    transition: filter 0.15s, opacity 0.15s;
+  }
+  button:hover:not(:disabled) { filter: brightness(1.15); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-cyan  { background: var(--cyan);   color: var(--bg); }
+  .btn-teal  { background: var(--teal);   color: var(--bg); }
+  .btn-gold  { background: var(--gold);   color: var(--bg); }
+  .btn-red   { background: var(--red);    color: var(--white); }
+  .btn-dim   { background: var(--bg-light); color: var(--grey); border: 1px solid var(--border); }
+  .btn-full  { width: 100%; }
+  .btn-icon  { padding: 5px 9px; font-size: 14px; line-height: 1; }
+
+  /* ── Status badge ── */
+  .status-badge {
+    font-size: 10px;
+    color: var(--grey);
+    padding: 2px 0;
+  }
+  .status-badge.ok  { color: var(--green); }
+  .status-badge.err { color: var(--red); }
+
+  /* ── Log ── */
+  .log-header {
+    background: var(--header);
+    color: var(--cyan);
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  #log {
+    flex: 1;
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.55;
+    padding: 10px 14px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  #log .t-cyan  { color: var(--cyan); }
+  #log .t-teal  { color: var(--teal); }
+  #log .t-gold  { color: var(--gold); }
+  #log .t-red   { color: var(--red); }
+  #log .t-green { color: var(--green); }
+  #log .t-grey  { color: var(--grey); }
+  #log .t-white { color: var(--white); }
+
+  /* ── Download banner ── */
+  #download-bar {
+    display: none;
+    background: var(--header);
+    border-top: 2px solid var(--teal);
+    padding: 8px 14px;
+    align-items: center;
+    gap: 12px;
+  }
+  #download-bar.visible { display: flex; }
+  #download-bar span { color: var(--teal); font-weight: bold; flex: 1; font-size: 12px; }
+
+  /* ── Status bar ── */
+  .statusbar {
+    background: var(--header);
+    border-top: 1px solid var(--border);
+    color: var(--grey);
+    font-size: 10px;
+    padding: 3px 12px;
+  }
+
+  /* ── Spinner ── */
+  .spinner {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border: 2px solid var(--grey);
+    border-top-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- Login screen — shown by default, hidden after auth check -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>◈  SONS of BANE  ◈</h1>
+    <h2>ALLIANCE AUDIT TOOL</h2>
+    <p>Sign in with your EVE Online character.</p>
+    <p>Access is restricted to SONS of BANE alliance members.</p>
+    <a href="/auth/login" class="btn-eve">Sign in with EVE Online</a>
+  </div>
+</div>
+
+<!-- Banner -->
+<div class="banner">
+  <div style="min-width:180px"></div>
+  <div class="banner-title">
+    <h1>◈  SONS of BANE  ·  ALLIANCE AUDIT TOOL  ◈</h1>
+    <p>EVE Online  ·  Fleet Activity &amp; Compliance Reporting</p>
+  </div>
+  <div id="user-info" class="user-bar"></div>
+</div>
+
+<!-- Main layout -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <!-- Credentials (admin only, hidden when creds come from env) -->
+    <div class="card" id="card-creds">
+      <div class="card-header">SESSION CREDENTIALS</div>
+      <div class="card-body">
+        <div id="cred-fields">
+          <div>
+            <label>Session ID (sessionid= from Chrome DevTools → Cookies)</label>
+            <input type="password" id="session-id" placeholder="paste session id…" autocomplete="off"/>
+          </div>
+          <div>
+            <label>CSRF Token (csrftoken= value)</label>
+            <input type="password" id="csrf-token" placeholder="paste csrf token…" autocomplete="off"/>
+          </div>
+          <div class="row">
+            <button class="btn-teal" id="btn-save-creds" onclick="saveCredentials()">💾 Save Credentials</button>
+          </div>
+        </div>
+        <div id="cred-status" class="status-badge"></div>
+      </div>
+    </div>
+
+    <!-- Audit target -->
+    <div class="card">
+      <div class="card-header">AUDIT TARGET</div>
+      <div class="card-body">
+        <div>
+          <label>Corporation</label>
+          <div class="row">
+            <select id="corp-select">
+              <option value="">— click Load Corps —</option>
+            </select>
+            <button class="btn-dim btn-icon" title="Load corps" onclick="loadCorps()">⟳</button>
+          </div>
+        </div>
+        <div>
+          <label>Audit Year</label>
+          <select id="year-select"></select>
+        </div>
+        <button class="btn-cyan btn-full" onclick="runCorp()" id="btn-corp">▶ Run Corp Report</button>
+        <button class="btn-gold btn-full" onclick="runAlliance()" id="btn-alliance">★ Run ALL SONS of BANE Corps</button>
+      </div>
+    </div>
+
+    <!-- Output / cache (admin only) -->
+    <div class="card" id="card-cache">
+      <div class="card-header">OUTPUT</div>
+      <div class="card-body">
+        <div id="cache-stats" class="status-badge">—</div>
+        <div class="row">
+          <button class="btn-dim" style="flex:1" onclick="refreshCache()">↻ Refresh Stats</button>
+          <button class="btn-red" style="flex:1" onclick="clearCache()">🗑 Clear Cache</button>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- Log panel -->
+  <div class="log-panel">
+    <div class="log-header">
+      OUTPUT LOG
+      <button class="btn-dim" style="font-size:10px;padding:3px 8px" onclick="clearLog()">Clear</button>
+    </div>
+    <div id="log"></div>
+
+    <!-- Download bar (hidden until report is ready) -->
+    <div id="download-bar">
+      <span id="download-label">Report ready</span>
+      <button class="btn-teal" onclick="downloadReport()">⬇ Download PDF</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Status bar -->
+<div class="statusbar" id="statusbar">Ready.</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let _corps    = [];
+let _running  = false;
+let _reportFile = null;
+let _ws       = null;
+let _user     = null;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+async function apiFetch(url, opts) {
+  const r = await fetch(url, opts);
+  if (r.status === 401) {
+    logLine('[!] Session expired — redirecting to login…', 'gold');
+    setTimeout(() => { window.location.href = '/auth/login'; }, 1500);
+    return null;
+  }
+  return r;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  const res  = await fetch('/auth/me');
+  const user = await res.json();
+
+  if (!user.authenticated) {
+    // Login screen is already displayed by default
+    return;
+  }
+
+  // Hide login overlay, app is already in DOM
+  document.getElementById('login-screen').style.display = 'none';
+  _user = user;
+
+  // Render user info bar
+  document.getElementById('user-info').innerHTML =
+    `<strong style="color:var(--cyan)">${escHtml(user.charName)}</strong>` +
+    `<span style="color:var(--grey);font-size:10px">${escHtml(user.corpName)}</span>` +
+    `<span class="role-badge role-${user.role}">${user.role}</span>` +
+    `<a href="/auth/logout" class="logout-link">logout</a>`;
+
+  // Populate year selector
+  const sel = document.getElementById('year-select');
+  const yr  = new Date().getFullYear();
+  for (let y = yr; y >= yr - 4; y--) {
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    sel.appendChild(o);
+  }
+
+  // Role-based UI gating
+  if (user.role !== 'admin') {
+    document.getElementById('card-cache').style.display    = 'none';
+    document.getElementById('btn-alliance').style.display  = 'none';
+  }
+  // Credentials card: admin only, and only when NOT supplied via env var
+  if (user.role !== 'admin' || user.credFromEnv) {
+    document.getElementById('card-creds').style.display = 'none';
+  }
+
+  // Admin-specific init
+  if (user.role === 'admin') {
+    if (user.credFromEnv) {
+      setBadge('cred-status', '✓ Credentials loaded from environment variable', 'ok');
+      document.getElementById('cred-fields').style.display = 'none';
+    } else {
+      apiFetch('/api/config/credentials')
+        .then(r => r && r.json())
+        .then(d => {
+          if (!d) return;
+          if (d.configured) {
+            setBadge('cred-status', '✓ Credentials loaded from Auth.env', 'ok');
+          } else {
+            setBadge('cred-status', '⚠ No credentials saved — paste and save above', 'err');
+          }
+        });
+    }
+    refreshCache();
+  }
+})();
+
+// ── Credentials ───────────────────────────────────────────────────────────────
+async function saveCredentials() {
+  const sid  = document.getElementById('session-id').value.trim();
+  const csrf = document.getElementById('csrf-token').value.trim();
+  if (!sid || !csrf) {
+    setBadge('cred-status', '! Both fields required', 'err'); return;
+  }
+  const r = await apiFetch('/api/config/credentials', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({session_id: sid, csrf_token: csrf}),
+  });
+  if (!r) return;
+  if (r.ok) {
+    setBadge('cred-status', '✓ Saved to Auth.env', 'ok');
+    logLine('[session] Credentials saved.', 'teal');
+  } else {
+    const e = await r.json();
+    setBadge('cred-status', `! ${e.detail || 'Save failed'}`, 'err');
+  }
+}
+
+// ── Corp list ─────────────────────────────────────────────────────────────────
+async function loadCorps() {
+  status('Loading corps from SONS of BANE…');
+  logLine('[↓] Fetching alliance corp list…', 'cyan');
+  try {
+    const r = await apiFetch('/api/corps');
+    if (!r) return;
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
+    _corps = await r.json();
+    const sel = document.getElementById('corp-select');
+    sel.innerHTML = '';
+
+    // Members see only their own corp; officers and admins see all
+    let visible = _corps;
+    if (_user?.role === 'member') {
+      visible = _corps.filter(c => String(c.id) === String(_user.corpId));
+      if (visible.length === 0) {
+        logLine('[!] Your corporation is not in the alliance corp list — contact an officer.', 'red');
+        status('Corp not found in alliance list.');
+        return;
+      }
+    }
+
+    visible.forEach(c => {
+      const o = document.createElement('option');
+      o.value = JSON.stringify(c); o.textContent = c.name;
+      sel.appendChild(o);
+    });
+    logLine(`[✓] Found ${_corps.length} corps in SONS of BANE.`, 'green');
+    visible.forEach(c => logLine(`    ${c.name}  (${c.id})`, 'grey'));
+    status(`Loaded ${visible.length} corp(s).`);
+  } catch(e) {
+    logLine(`[!] ${e.message}`, 'red');
+    status('Failed to load corps.');
+  }
+}
+
+// ── Audit runners ─────────────────────────────────────────────────────────────
+async function runCorp() {
+  if (_running) return;
+  const sel = document.getElementById('corp-select');
+  if (!sel.value) { logLine('[!] No corp selected — click ⟳ to load corps first.', 'gold'); return; }
+  const corp = JSON.parse(sel.value);
+  const year = parseInt(document.getElementById('year-select').value);
+
+  logDivider();
+  logLine(`[▶] Corp audit: ${corp.name}  (${year})`, 'cyan');
+
+  const r = await apiFetch('/api/audit/corp', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({corp_id: corp.id, corp_name: corp.name, year}),
+  });
+  if (!r) return;
+  if (!r.ok) { const e = await r.json(); logLine(`[!] ${e.detail}`, 'red'); return; }
+  const {job_id} = await r.json();
+  connectWs(job_id);
+}
+
+async function runAlliance() {
+  if (_running) return;
+  const year = parseInt(document.getElementById('year-select').value);
+  logDivider();
+  logLine(`[★] Alliance-wide audit  (${year})`, 'gold');
+
+  const r = await apiFetch('/api/audit/alliance', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({year}),
+  });
+  if (!r) return;
+  if (!r.ok) { const e = await r.json(); logLine(`[!] ${e.detail}`, 'red'); return; }
+  const {job_id} = await r.json();
+  connectWs(job_id);
+}
+
+// ── WebSocket progress ────────────────────────────────────────────────────────
+function connectWs(jobId) {
+  setRunning(true);
+  hideDownload();
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  _ws = new WebSocket(`${proto}://${location.host}/ws/${jobId}`);
+
+  _ws.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.done) {
+      setRunning(false);
+      if (msg.file) showDownload(msg.file);
+      if (_user?.role === 'admin') refreshCache();
+      return;
+    }
+    if (msg.msg) logLine(msg.msg, msg.tag || 'white');
+  };
+
+  _ws.onerror = () => { logLine('[!] WebSocket error.', 'red'); setRunning(false); };
+  _ws.onclose = () => { if (_running) setRunning(false); };
+}
+
+// ── Download ──────────────────────────────────────────────────────────────────
+function showDownload(filename) {
+  _reportFile = filename;
+  document.getElementById('download-label').textContent = `Report ready: ${filename}`;
+  document.getElementById('download-bar').classList.add('visible');
+}
+function hideDownload() {
+  _reportFile = null;
+  document.getElementById('download-bar').classList.remove('visible');
+}
+function downloadReport() {
+  if (_reportFile) window.open(`/api/reports/${encodeURIComponent(_reportFile)}`);
+}
+
+// ── Cache (admin only) ────────────────────────────────────────────────────────
+async function refreshCache() {
+  const r = await apiFetch('/api/cache/stats');
+  if (!r) return;
+  const s = await r.json();
+  const el = document.getElementById('cache-stats');
+  if (s.count === 0) { el.textContent = 'Cache empty'; return; }
+  el.textContent = `${s.count} entries · ${s.size_kb} KB\nOldest: ${s.oldest} · Newest: ${s.newest}`;
+}
+
+async function clearCache() {
+  const r = await apiFetch('/api/cache/clear', {method: 'DELETE'});
+  if (!r) return;
+  const s = await r.json();
+  logLine(`[🗑] Cache cleared — ${s.cleared} entries removed.`, 'gold');
+  refreshCache();
+}
+
+// ── Log helpers ───────────────────────────────────────────────────────────────
+function logLine(text, tag) {
+  const el  = document.getElementById('log');
+  const cls = tag ? `t-${tag}` : 't-white';
+  const span = document.createElement('span');
+  span.className = cls;
+  span.textContent = text + '\n';
+  el.appendChild(span);
+  el.scrollTop = el.scrollHeight;
+}
+function logDivider() {
+  logLine('─'.repeat(56), 'grey');
+}
+function clearLog() {
+  document.getElementById('log').innerHTML = '';
+}
+
+// ── UI state ──────────────────────────────────────────────────────────────────
+function setRunning(state) {
+  _running = state;
+  document.getElementById('btn-corp').disabled     = state;
+  document.getElementById('btn-alliance').disabled = state;
+  status(state ? '⏳ Audit running — see log for progress…' : 'Done.');
+}
+function status(msg) {
+  document.getElementById('statusbar').textContent = msg;
+}
+function setBadge(id, text, cls) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = `status-badge ${cls || ''}`;
+}
+</script>
+</body>
+</html>
