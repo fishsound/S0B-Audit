@@ -1,0 +1,24 @@
+# Credentials — never commit
+.env
+Auth.env
+
+# Generated output
+reports/
+.cache/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Python (legacy — original scripts kept for reference)
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
