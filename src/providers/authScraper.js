@@ -230,6 +230,51 @@ class AllianceAuthProvider extends BaseProvider {
     }
   }
 
+  // ── Asset location ────────────────────────────────────────────────────────
+
+  async _topAssetSystem(pk) {
+    const key    = `asset_sys:${pk}`;
+    const cached = await cacheGet(key, TTL.OVERVIEW);
+    if (cached !== null) return cached === '__none__' ? '' : cached;
+
+    try {
+      // aa-memberaudit DataTables endpoint — same naming pattern as character_finder_data
+      const r    = await this._get(`/member-audit/character_assets_data/${pk}/`, {
+        draw: '1', start: '0', length: '2000',
+      });
+      const rows = r.data?.data;
+      if (!Array.isArray(rows) || !rows.length) {
+        await cacheSet(key, '__none__');
+        return '';
+      }
+
+      // Typical column layout: name, qty, location, group, est_total_value
+      // Sum asset value per solar system; system = text before first " - "
+      const totals = {};
+      for (const row of rows) {
+        const locRaw = row[2];
+        if (!locRaw) continue;
+        const loc = cheerio.load(String(locRaw))('body').text().trim();
+        if (!loc) continue;
+        const sys = loc.split(' - ')[0].trim();
+        if (!sys) continue;
+
+        let val = 1;
+        if (row[4] != null) {
+          const m = String(row[4]).replace(/,/g, '').match(/[\d.]+/);
+          if (m) val = parseFloat(m[0]);
+        }
+        totals[sys] = (totals[sys] || 0) + val;
+      }
+
+      const top = Object.entries(totals).sort(([, a], [, b]) => b - a)[0]?.[0] || '';
+      await cacheSet(key, top || '__none__');
+      return top;
+    } catch {
+      return '';
+    }
+  }
+
   // ── Provider entry-point ──────────────────────────────────────────────────
 
   async enrich(chars, corpId, corpName, year, log) {
@@ -248,6 +293,11 @@ class AllianceAuthProvider extends BaseProvider {
       } catch (e) {
         log(`      ! overview ${ch.name}: ${e.message}`, 'red');
       }
+    })));
+
+    log(`      fetching asset locations (${chars.length} chars)…`, 'grey');
+    await Promise.all(chars.map(ch => this._limit(async () => {
+      ch.topAssetSystem = await this._topAssetSystem(ch.pk);
     })));
 
     // Build 3-year FAT task list

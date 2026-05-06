@@ -156,17 +156,17 @@ function rosterCols(year) {
   // Landscape A4 usable width ≈ 802pt
   const usable  = 841.89 - 2 * MARGIN;
   const months  = yearMonths(year);
-  // Fixed columns: #, name, joined, alliance, sp, login, sec, total, rating
-  const fixed   = [14, 100, 57, 70, 33, 57, 27, 33, 42];
+  // Fixed columns: #, name, asset base, joined, alliance, sp, login, sec, total, rating
+  const fixed   = [14, 85, 65, 50, 62, 30, 50, 24, 29, 40];
   const fixedW  = fixed.reduce((a, b) => a + b, 0);
   const moW     = Math.floor((usable - fixedW) / months.length);
   return { fixed, moW, months, usable };
 }
 
 function rosterHeader(year) {
-  const { fixed, moW, months } = rosterCols(year);
+  const { months } = rosterCols(year);
   return [
-    '#', 'PILOT NAME', 'CORP JOINED', 'IN ALLIANCE',
+    '#', 'PILOT NAME', 'ASSET BASE', 'CORP JOINED', 'IN ALLIANCE',
     'SP (M)', 'LAST LOGIN', 'SEC', 'FATs',
     ...months.map(m => `${m} '${String(year).slice(2)}`),
     'RATING',
@@ -188,6 +188,7 @@ function rosterRow(ch, idx, year) {
   return [
     { text: idx + 1,      color: C.GREY,            align: 'center' },
     { text: ch.name,      color: C.WHITE, bold: true, align: 'left'  },
+    { text: ch.topAssetSystem || '—', color: C.CYAN, align: 'left'  },
     { text: ch.joinDate  || '—', color: C.GREY,      align: 'center' },
     { text: ch.timeInCorp || ch.born || '—', color: C.GREY, align: 'center' },
     { text: sp,           color: spC,                align: 'center' },

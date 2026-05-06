@@ -20,9 +20,10 @@ function makeCharacter(pk, name) {
     assetsB:      0,
     location:     '',
     ship:         '',
-    totalFats:    0,
-    fatsByYear:   {},
-    fatsByMonth:  {},
+    totalFats:     0,
+    fatsByYear:    {},
+    fatsByMonth:   {},
+    topAssetSystem: '',
     // Extensible bucket — new providers write keyed sub-objects here,
     // e.g. providerData.zkillboard = { kills: 42, efficiency: 0.87 }
     providerData: {},
