@@ -279,22 +279,14 @@ class AllianceAuthProvider extends BaseProvider {
         return '';
       }
 
-      // Typical column layout: name, qty, location, group, est_total_value
-      // Sum asset value per solar system; system = text before first " - "
+      // Response uses named keys: { solar_system, total, location, region, … }
+      // solar_system is the system name directly; total is ISK value of that row.
       const totals = {};
       for (const row of rows) {
-        const locRaw = row[2];
-        if (!locRaw) continue;
-        const loc = cheerio.load(String(locRaw))('body').text().trim();
-        if (!loc) continue;
-        const sys = loc.split(' - ')[0].trim();
+        const sys = row.solar_system
+          || (typeof row.location === 'string' ? row.location.split(' - ')[0].trim() : '');
         if (!sys) continue;
-
-        let val = 1;
-        if (row[4] != null) {
-          const m = String(row[4]).replace(/,/g, '').match(/[\d.]+/);
-          if (m) val = parseFloat(m[0]);
-        }
+        const val = typeof row.total === 'number' ? row.total : 1;
         totals[sys] = (totals[sys] || 0) + val;
       }
 
