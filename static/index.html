@@ -32,12 +32,9 @@
 
   /* ── Login screen ── */
   #login-screen {
-    position: fixed;
-    inset: 0;
+    position: fixed; inset: 0;
     background: var(--bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     z-index: 100;
   }
   .login-box {
@@ -46,43 +43,17 @@
     border-radius: 6px;
     padding: 48px 56px;
     text-align: center;
-    max-width: 420px;
-    width: 90%;
+    max-width: 420px; width: 90%;
   }
-  .login-box h1 {
-    color: var(--cyan);
-    font-size: 20px;
-    letter-spacing: 1px;
-    margin-bottom: 8px;
-  }
-  .login-box h2 {
-    color: var(--gold);
-    font-size: 13px;
-    letter-spacing: 0.5px;
-    font-weight: normal;
-    margin-bottom: 28px;
-  }
-  .login-box p {
-    color: var(--grey);
-    font-size: 11px;
-    line-height: 1.6;
-    margin-bottom: 6px;
-  }
+  .login-box h1 { color: var(--cyan); font-size: 20px; letter-spacing: 1px; margin-bottom: 8px; }
+  .login-box h2 { color: var(--gold); font-size: 13px; font-weight: normal; letter-spacing: 0.5px; margin-bottom: 28px; }
+  .login-box p  { color: var(--grey); font-size: 11px; line-height: 1.6; margin-bottom: 6px; }
   .btn-eve {
-    display: inline-block;
-    margin-top: 24px;
-    padding: 11px 28px;
-    background: transparent;
-    border: 2px solid var(--cyan);
-    border-radius: 4px;
-    color: var(--cyan);
-    font-family: inherit;
-    font-weight: bold;
-    font-size: 13px;
-    letter-spacing: 0.5px;
-    text-decoration: none;
-    transition: background 0.15s, color 0.15s;
-    cursor: pointer;
+    display: inline-block; margin-top: 24px; padding: 11px 28px;
+    background: transparent; border: 2px solid var(--cyan); border-radius: 4px;
+    color: var(--cyan); font-family: inherit; font-weight: bold; font-size: 13px;
+    letter-spacing: 0.5px; text-decoration: none;
+    transition: background 0.15s, color 0.15s; cursor: pointer;
   }
   .btn-eve:hover { background: var(--cyan); color: var(--bg); }
 
@@ -91,213 +62,150 @@
     background: var(--bg);
     border-bottom: 2px solid var(--header);
     padding: 10px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
   }
   .banner-title { text-align: center; flex: 1; }
-  .banner-title h1 {
-    color: var(--cyan);
-    font-size: 20px;
-    letter-spacing: 1px;
-  }
-  .banner-title p { color: var(--grey); font-size: 11px; margin-top: 2px; }
-
-  /* ── User info ── */
-  .user-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
-    white-space: nowrap;
-    min-width: 180px;
-    justify-content: flex-end;
-  }
-  .role-badge {
-    font-size: 9px;
-    font-weight: bold;
-    padding: 2px 6px;
-    border-radius: 3px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-  }
+  .banner-title h1 { color: var(--cyan); font-size: 20px; letter-spacing: 1px; }
+  .banner-title p  { color: var(--grey); font-size: 11px; margin-top: 2px; }
+  .user-bar { display: flex; align-items: center; gap: 8px; font-size: 11px; white-space: nowrap; min-width: 180px; justify-content: flex-end; }
+  .role-badge { font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.5px; text-transform: uppercase; }
   .role-member  { background: var(--header); color: var(--cyan);  border: 1px solid var(--cyan); }
   .role-officer { background: #014d40;       color: var(--teal);  border: 1px solid var(--teal); }
   .role-admin   { background: #3d2f00;       color: var(--gold);  border: 1px solid var(--gold); }
-  .logout-link {
-    color: var(--grey);
-    text-decoration: none;
-    font-size: 10px;
-    padding: 2px 6px;
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    transition: color 0.1s, border-color 0.1s;
-  }
+  .logout-link  { color: var(--grey); text-decoration: none; font-size: 10px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 3px; transition: color 0.1s, border-color 0.1s; }
   .logout-link:hover { color: var(--red); border-color: var(--red); }
 
   /* ── Layout ── */
-  .layout {
-    display: flex;
-    flex: 1;
-    gap: 0;
-    overflow: hidden;
-  }
+  .layout { display: flex; flex: 1; overflow: hidden; }
   .sidebar {
-    width: 340px;
-    min-width: 280px;
-    background: var(--bg);
-    border-right: 1px solid var(--border);
-    overflow-y: auto;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    width: 340px; min-width: 280px;
+    background: var(--bg); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 12px;
+    display: flex; flex-direction: column; gap: 10px;
   }
-  .log-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+  .main-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-  /* ── Section cards ── */
-  .card {
-    background: var(--bg-mid);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  .card-header {
-    background: var(--header);
-    color: var(--cyan);
-    font-size: 10px;
-    font-weight: bold;
-    letter-spacing: 0.5px;
-    padding: 6px 10px;
-  }
+  /* ── Cards ── */
+  .card { background: var(--bg-mid); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .card-header { background: var(--header); color: var(--cyan); font-size: 10px; font-weight: bold; letter-spacing: 0.5px; padding: 6px 10px; }
   .card-body { padding: 10px; display: flex; flex-direction: column; gap: 7px; }
 
-  /* ── Form elements ── */
+  /* ── Form ── */
   label { color: var(--grey); font-size: 10px; display: block; margin-bottom: 2px; }
   input[type="text"], input[type="password"], select {
-    width: 100%;
-    background: var(--bg-light);
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    color: var(--white);
-    font-size: 12px;
-    padding: 5px 8px;
-    outline: none;
-    transition: border-color 0.15s;
+    width: 100%; background: var(--bg-light); border: 1px solid var(--border); border-radius: 3px;
+    color: var(--white); font-size: 12px; padding: 5px 8px; outline: none; transition: border-color 0.15s;
   }
   input:focus, select:focus { border-color: var(--cyan); }
   input:disabled, select:disabled { opacity: 0.45; cursor: not-allowed; }
   select option { background: var(--bg-light); }
-
   .row { display: flex; gap: 6px; align-items: center; }
   .row input, .row select { flex: 1; }
 
   /* ── Buttons ── */
-  button {
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    font-family: inherit;
-    font-weight: bold;
-    font-size: 12px;
-    padding: 6px 14px;
-    transition: filter 0.15s, opacity 0.15s;
-  }
+  button { border: none; border-radius: 3px; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 12px; padding: 6px 14px; transition: filter 0.15s, opacity 0.15s; }
   button:hover:not(:disabled) { filter: brightness(1.15); }
   button:disabled { opacity: 0.45; cursor: not-allowed; }
-  .btn-cyan  { background: var(--cyan);   color: var(--bg); }
-  .btn-teal  { background: var(--teal);   color: var(--bg); }
-  .btn-gold  { background: var(--gold);   color: var(--bg); }
-  .btn-red   { background: var(--red);    color: var(--white); }
-  .btn-dim   { background: var(--bg-light); color: var(--grey); border: 1px solid var(--border); }
+  .btn-cyan  { background: var(--cyan);     color: var(--bg);    }
+  .btn-teal  { background: var(--teal);     color: var(--bg);    }
+  .btn-gold  { background: var(--gold);     color: var(--bg);    }
+  .btn-red   { background: var(--red);      color: var(--white); }
+  .btn-dim   { background: var(--bg-light); color: var(--grey);  border: 1px solid var(--border); }
   .btn-full  { width: 100%; }
   .btn-icon  { padding: 5px 9px; font-size: 14px; line-height: 1; }
-
-  /* ── Status badge ── */
-  .status-badge {
-    font-size: 10px;
-    color: var(--grey);
-    padding: 2px 0;
-  }
+  .status-badge { font-size: 10px; color: var(--grey); padding: 2px 0; }
   .status-badge.ok  { color: var(--green); }
-  .status-badge.err { color: var(--red); }
+  .status-badge.err { color: var(--red);   }
+
+  /* ── Panel tabs ── */
+  .panel-tabs {
+    background: var(--header);
+    display: flex; align-items: stretch;
+    flex-shrink: 0;
+  }
+  .tab-btn {
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    color: var(--grey); font-size: 10px; font-weight: bold; letter-spacing: 0.5px;
+    padding: 6px 14px; cursor: pointer; transition: color 0.1s;
+    font-family: inherit;
+  }
+  .tab-btn:hover { color: var(--white); filter: none; }
+  .tab-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+  .tab-spacer { flex: 1; }
+  .tab-clear { margin: 3px 6px; font-size: 10px; padding: 3px 8px; }
+  .tab-view { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
 
   /* ── Log ── */
-  .log-header {
-    background: var(--header);
-    color: var(--cyan);
-    font-size: 10px;
-    font-weight: bold;
-    letter-spacing: 0.5px;
-    padding: 6px 12px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
   #log {
-    flex: 1;
-    background: var(--bg);
-    color: var(--white);
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 11px;
-    line-height: 1.55;
-    padding: 10px 14px;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
+    flex: 1; background: var(--bg); color: var(--white);
+    font-family: 'Consolas', 'Courier New', monospace; font-size: 11px; line-height: 1.55;
+    padding: 10px 14px; overflow-y: auto; white-space: pre-wrap; word-break: break-word;
   }
-  #log .t-cyan  { color: var(--cyan); }
-  #log .t-teal  { color: var(--teal); }
-  #log .t-gold  { color: var(--gold); }
-  #log .t-red   { color: var(--red); }
+  #log .t-cyan  { color: var(--cyan);  }
+  #log .t-teal  { color: var(--teal);  }
+  #log .t-gold  { color: var(--gold);  }
+  #log .t-red   { color: var(--red);   }
   #log .t-green { color: var(--green); }
-  #log .t-grey  { color: var(--grey); }
+  #log .t-grey  { color: var(--grey);  }
   #log .t-white { color: var(--white); }
 
-  /* ── Download banner ── */
+  /* ── Report view ── */
+  .report-toolbar {
+    background: var(--bg-mid); border-bottom: 1px solid var(--border);
+    padding: 6px 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .report-toolbar input, .report-toolbar select {
+    width: auto; max-width: 180px; font-size: 11px; padding: 3px 7px;
+  }
+  #rpt-summary { color: var(--grey); font-size: 10px; }
+  .report-scroll { flex: 1; overflow: auto; }
+
+  #report-table { border-collapse: collapse; width: 100%; font-size: 11px; }
+  #report-table th {
+    background: var(--header); color: var(--cyan); font-size: 9px; font-weight: bold;
+    letter-spacing: 0.5px; padding: 5px 6px; white-space: nowrap;
+    position: sticky; top: 0; z-index: 1; user-select: none;
+    border-right: 1px solid var(--border);
+  }
+  #report-table th.sortable { cursor: pointer; }
+  #report-table th.sortable:hover { color: var(--white); }
+  #report-table th .sa { margin-left: 3px; opacity: 0.4; font-size: 8px; }
+  #report-table th.s-asc .sa::after  { content: '▲'; opacity: 1; }
+  #report-table th.s-desc .sa::after { content: '▼'; opacity: 1; }
+  #report-table th:not(.s-asc):not(.s-desc) .sa::after { content: '⇅'; }
+  #report-table td {
+    padding: 3px 6px; white-space: nowrap;
+    border-bottom: 1px solid #1a2030; border-right: 1px solid #1a2030;
+  }
+  #report-table tr:nth-child(even) td { background: var(--bg-mid);   }
+  #report-table tr:nth-child(odd)  td { background: var(--bg-light); }
+  #report-table tr:hover td { filter: brightness(1.2); }
+
+  .rt-badge { font-size: 9px; font-weight: bold; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+  .rt-elite   { color: var(--teal);  border: 1px solid var(--teal);  }
+  .rt-active  { color: var(--green); border: 1px solid var(--green); }
+  .rt-partial { color: var(--gold);  border: 1px solid var(--gold);  }
+  .rt-ghost   { color: var(--red);   border: 1px solid var(--red);   }
+
+  /* ── Download bar ── */
   #download-bar {
-    display: none;
-    background: var(--header);
-    border-top: 2px solid var(--teal);
-    padding: 8px 14px;
-    align-items: center;
-    gap: 12px;
+    display: none; background: var(--header); border-top: 2px solid var(--teal);
+    padding: 8px 14px; align-items: center; gap: 12px; flex-shrink: 0;
   }
   #download-bar.visible { display: flex; }
   #download-bar span { color: var(--teal); font-weight: bold; flex: 1; font-size: 12px; }
 
   /* ── Status bar ── */
-  .statusbar {
-    background: var(--header);
-    border-top: 1px solid var(--border);
-    color: var(--grey);
-    font-size: 10px;
-    padding: 3px 12px;
-  }
+  .statusbar { background: var(--header); border-top: 1px solid var(--border); color: var(--grey); font-size: 10px; padding: 3px 12px; flex-shrink: 0; }
 
   /* ── Spinner ── */
-  .spinner {
-    display: inline-block;
-    width: 10px; height: 10px;
-    border: 2px solid var(--grey);
-    border-top-color: var(--cyan);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    margin-right: 5px;
-    vertical-align: middle;
-  }
+  .spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--grey); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 5px; vertical-align: middle; }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
-<!-- Login screen — shown by default, hidden after auth check -->
 <div id="login-screen">
   <div class="login-box">
     <h1>◈  SONS of BANE  ◈</h1>
@@ -308,7 +216,6 @@
   </div>
 </div>
 
-<!-- Banner -->
 <div class="banner">
   <div style="min-width:180px"></div>
   <div class="banner-title">
@@ -318,13 +225,10 @@
   <div id="user-info" class="user-bar"></div>
 </div>
 
-<!-- Main layout -->
 <div class="layout">
 
-  <!-- Sidebar -->
   <aside class="sidebar">
 
-    <!-- Credentials (admin only, hidden when creds come from env) -->
     <div class="card" id="card-creds">
       <div class="card-header">SESSION CREDENTIALS</div>
       <div class="card-body">
@@ -345,16 +249,13 @@
       </div>
     </div>
 
-    <!-- Audit target -->
     <div class="card">
       <div class="card-header">AUDIT TARGET</div>
       <div class="card-body">
         <div>
           <label>Corporation</label>
           <div class="row">
-            <select id="corp-select">
-              <option value="">— click Load Corps —</option>
-            </select>
+            <select id="corp-select"><option value="">— click Load Corps —</option></select>
             <button class="btn-dim btn-icon" title="Load corps" onclick="loadCorps()">⟳</button>
           </div>
         </div>
@@ -367,55 +268,79 @@
       </div>
     </div>
 
-    <!-- Output / cache (admin only) -->
     <div class="card" id="card-cache">
       <div class="card-header">OUTPUT</div>
       <div class="card-body">
         <div id="cache-stats" class="status-badge">—</div>
         <div class="row">
           <button class="btn-dim" style="flex:1" onclick="refreshCache()">↻ Refresh Stats</button>
-          <button class="btn-red" style="flex:1" onclick="clearCache()">🗑 Clear Cache</button>
+          <button class="btn-red"  style="flex:1" onclick="clearCache()">🗑 Clear Cache</button>
         </div>
       </div>
     </div>
 
   </aside>
 
-  <!-- Log panel -->
-  <div class="log-panel">
-    <div class="log-header">
-      OUTPUT LOG
-      <button class="btn-dim" style="font-size:10px;padding:3px 8px" onclick="clearLog()">Clear</button>
-    </div>
-    <div id="log"></div>
+  <div class="main-panel">
 
-    <!-- Download bar (hidden until report is ready) -->
+    <div class="panel-tabs">
+      <button id="tab-btn-log"    class="tab-btn active" onclick="showTab('log')">OUTPUT LOG</button>
+      <button id="tab-btn-report" class="tab-btn"        onclick="showTab('report')">REPORT</button>
+      <div class="tab-spacer"></div>
+      <button class="btn-dim tab-clear" onclick="clearLog()">Clear</button>
+    </div>
+
+    <div id="view-log" class="tab-view">
+      <div id="log"></div>
+    </div>
+
+    <div id="view-report" class="tab-view" style="display:none">
+      <div class="report-toolbar">
+        <input type="text"   id="rpt-filter" placeholder="Filter by name…" oninput="filterReport()"/>
+        <select id="rpt-rating" onchange="filterReport()">
+          <option value="">All ratings</option>
+          <option value="ELITE">★ ELITE</option>
+          <option value="ACTIVE">◆ ACTIVE</option>
+          <option value="PARTIAL">▷ PARTIAL</option>
+          <option value="GHOST">○ GHOST</option>
+        </select>
+        <select id="rpt-corp" onchange="filterReport()" style="display:none">
+          <option value="">All Corps</option>
+        </select>
+        <span id="rpt-summary"></span>
+      </div>
+      <div class="report-scroll">
+        <table id="report-table">
+          <thead id="rt-head"></thead>
+          <tbody id="rt-body"></tbody>
+        </table>
+      </div>
+    </div>
+
     <div id="download-bar">
       <span id="download-label">Report ready</span>
       <button class="btn-teal" onclick="downloadReport()">⬇ Download PDF</button>
     </div>
-  </div>
 
+  </div>
 </div>
 
-<!-- Status bar -->
 <div class="statusbar" id="statusbar">Ready.</div>
 
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
-let _corps    = [];
-let _running  = false;
-let _reportFile = null;
-let _ws       = null;
-let _user     = null;
+let _corps       = [];
+let _running     = false;
+let _reportFile  = null;
+let _ws          = null;
+let _user        = null;
+let _reportData  = null;
+let _filteredRows = [];
+let _sortState   = { col: 'totalFats', dir: -1 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function escHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 async function apiFetch(url, opts) {
@@ -433,57 +358,40 @@ async function apiFetch(url, opts) {
   const res  = await fetch('/auth/me');
   const user = await res.json();
 
-  if (!user.authenticated) {
-    // Login screen is already displayed by default
-    return;
-  }
+  if (!user.authenticated) return; // login screen already visible
 
-  // Hide login overlay, app is already in DOM
   document.getElementById('login-screen').style.display = 'none';
   _user = user;
 
-  // Render user info bar
   document.getElementById('user-info').innerHTML =
     `<strong style="color:var(--cyan)">${escHtml(user.charName)}</strong>` +
     `<span style="color:var(--grey);font-size:10px">${escHtml(user.corpName)}</span>` +
     `<span class="role-badge role-${user.role}">${user.role}</span>` +
     `<a href="/auth/logout" class="logout-link">logout</a>`;
 
-  // Populate year selector
   const sel = document.getElementById('year-select');
   const yr  = new Date().getFullYear();
   for (let y = yr; y >= yr - 4; y--) {
-    const o = document.createElement('option');
-    o.value = y; o.textContent = y;
-    sel.appendChild(o);
+    const o = document.createElement('option'); o.value = y; o.textContent = y; sel.appendChild(o);
   }
 
-  // Role-based UI gating
   if (user.role !== 'admin') {
-    document.getElementById('card-cache').style.display    = 'none';
-    document.getElementById('btn-alliance').style.display  = 'none';
+    document.getElementById('card-cache').style.display   = 'none';
+    document.getElementById('btn-alliance').style.display = 'none';
   }
-  // Credentials card: admin only, and only when NOT supplied via env var
   if (user.role !== 'admin' || user.credFromEnv) {
     document.getElementById('card-creds').style.display = 'none';
   }
 
-  // Admin-specific init
   if (user.role === 'admin') {
     if (user.credFromEnv) {
       setBadge('cred-status', '✓ Credentials loaded from environment variable', 'ok');
       document.getElementById('cred-fields').style.display = 'none';
     } else {
-      apiFetch('/api/config/credentials')
-        .then(r => r && r.json())
-        .then(d => {
-          if (!d) return;
-          if (d.configured) {
-            setBadge('cred-status', '✓ Credentials loaded from Auth.env', 'ok');
-          } else {
-            setBadge('cred-status', '⚠ No credentials saved — paste and save above', 'err');
-          }
-        });
+      apiFetch('/api/config/credentials').then(r => r && r.json()).then(d => {
+        if (!d) return;
+        setBadge('cred-status', d.configured ? '✓ Credentials loaded from Auth.env' : '⚠ No credentials saved — paste and save above', d.configured ? 'ok' : 'err');
+      });
     }
     refreshCache();
   }
@@ -493,12 +401,9 @@ async function apiFetch(url, opts) {
 async function saveCredentials() {
   const sid  = document.getElementById('session-id').value.trim();
   const csrf = document.getElementById('csrf-token').value.trim();
-  if (!sid || !csrf) {
-    setBadge('cred-status', '! Both fields required', 'err'); return;
-  }
+  if (!sid || !csrf) { setBadge('cred-status', '! Both fields required', 'err'); return; }
   const r = await apiFetch('/api/config/credentials', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({session_id: sid, csrf_token: csrf}),
   });
   if (!r) return;
@@ -523,28 +428,23 @@ async function loadCorps() {
     const sel = document.getElementById('corp-select');
     sel.innerHTML = '';
 
-    // Members see only their own corp; officers and admins see all
     let visible = _corps;
     if (_user?.role === 'member') {
       visible = _corps.filter(c => String(c.id) === String(_user.corpId));
-      if (visible.length === 0) {
+      if (!visible.length) {
         logLine('[!] Your corporation is not in the alliance corp list — contact an officer.', 'red');
-        status('Corp not found in alliance list.');
-        return;
+        status('Corp not found in alliance list.'); return;
       }
     }
 
     visible.forEach(c => {
-      const o = document.createElement('option');
-      o.value = JSON.stringify(c); o.textContent = c.name;
-      sel.appendChild(o);
+      const o = document.createElement('option'); o.value = JSON.stringify(c); o.textContent = c.name; sel.appendChild(o);
     });
     logLine(`[✓] Found ${_corps.length} corps in SONS of BANE.`, 'green');
     visible.forEach(c => logLine(`    ${c.name}  (${c.id})`, 'grey'));
     status(`Loaded ${visible.length} corp(s).`);
   } catch(e) {
-    logLine(`[!] ${e.message}`, 'red');
-    status('Failed to load corps.');
+    logLine(`[!] ${e.message}`, 'red'); status('Failed to load corps.');
   }
 }
 
@@ -556,12 +456,12 @@ async function runCorp() {
   const corp = JSON.parse(sel.value);
   const year = parseInt(document.getElementById('year-select').value);
 
+  showTab('log');
   logDivider();
   logLine(`[▶] Corp audit: ${corp.name}  (${year})`, 'cyan');
 
   const r = await apiFetch('/api/audit/corp', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({corp_id: corp.id, corp_name: corp.name, year}),
   });
   if (!r) return;
@@ -573,12 +473,13 @@ async function runCorp() {
 async function runAlliance() {
   if (_running) return;
   const year = parseInt(document.getElementById('year-select').value);
+
+  showTab('log');
   logDivider();
   logLine(`[★] Alliance-wide audit  (${year})`, 'gold');
 
   const r = await apiFetch('/api/audit/alliance', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({year}),
   });
   if (!r) return;
@@ -589,8 +490,7 @@ async function runAlliance() {
 
 // ── WebSocket progress ────────────────────────────────────────────────────────
 function connectWs(jobId) {
-  setRunning(true);
-  hideDownload();
+  setRunning(true); hideDownload();
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   _ws = new WebSocket(`${proto}://${location.host}/ws/${jobId}`);
 
@@ -598,13 +498,15 @@ function connectWs(jobId) {
     const msg = JSON.parse(ev.data);
     if (msg.done) {
       setRunning(false);
-      if (msg.file) showDownload(msg.file);
+      if (msg.file) {
+        showDownload(msg.file);
+        loadReport(msg.file);
+      }
       if (_user?.role === 'admin') refreshCache();
       return;
     }
     if (msg.msg) logLine(msg.msg, msg.tag || 'white');
   };
-
   _ws.onerror = () => { logLine('[!] WebSocket error.', 'red'); setRunning(false); };
   _ws.onclose = () => { if (_running) setRunning(false); };
 }
@@ -623,16 +525,14 @@ function downloadReport() {
   if (_reportFile) window.open(`/api/reports/${encodeURIComponent(_reportFile)}`);
 }
 
-// ── Cache (admin only) ────────────────────────────────────────────────────────
+// ── Cache ─────────────────────────────────────────────────────────────────────
 async function refreshCache() {
   const r = await apiFetch('/api/cache/stats');
   if (!r) return;
   const s = await r.json();
   const el = document.getElementById('cache-stats');
-  if (s.count === 0) { el.textContent = 'Cache empty'; return; }
-  el.textContent = `${s.count} entries · ${s.size_kb} KB\nOldest: ${s.oldest} · Newest: ${s.newest}`;
+  el.textContent = s.count === 0 ? 'Cache empty' : `${s.count} entries · ${s.size_kb} KB\nOldest: ${s.oldest} · Newest: ${s.newest}`;
 }
-
 async function clearCache() {
   const r = await apiFetch('/api/cache/clear', {method: 'DELETE'});
   if (!r) return;
@@ -641,22 +541,226 @@ async function clearCache() {
   refreshCache();
 }
 
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.getElementById('view-log').style.display    = name === 'log'    ? 'flex' : 'none';
+  document.getElementById('view-report').style.display = name === 'report' ? 'flex' : 'none';
+  document.getElementById('tab-btn-log').classList.toggle('active',    name === 'log');
+  document.getElementById('tab-btn-report').classList.toggle('active', name === 'report');
+}
+
+// ── Report: load & render ─────────────────────────────────────────────────────
+async function loadReport(pdfFile) {
+  const r = await apiFetch(`/api/reports/${encodeURIComponent(pdfFile)}/data`);
+  if (!r || !r.ok) return;
+  _reportData = await r.json();
+  _sortState  = { col: 'totalFats', dir: -1 };
+  document.getElementById('rpt-filter').value = '';
+  document.getElementById('rpt-rating').value = '';
+
+  const corpSel = document.getElementById('rpt-corp');
+  if (_reportData.type === 'alliance') {
+    corpSel.style.display = '';
+    corpSel.innerHTML = '<option value="">All Corps</option>';
+    _reportData.corps.forEach(c => {
+      const o = document.createElement('option'); o.value = c.name; o.textContent = c.name; corpSel.appendChild(o);
+    });
+  } else {
+    corpSel.style.display = 'none';
+  }
+
+  filterReport();
+  showTab('report');
+}
+
+function filterReport() {
+  if (!_reportData) return;
+  const nameF   = document.getElementById('rpt-filter').value.toLowerCase();
+  const ratingF = document.getElementById('rpt-rating').value;
+  const corpF   = document.getElementById('rpt-corp').value;
+
+  let members = _reportData.type === 'corp'
+    ? _reportData.members
+    : _reportData.corps.flatMap(c => c.members.map(m => ({ ...m, _corp: c.name })));
+
+  if (corpF)   members = members.filter(m => m._corp === corpF);
+  if (nameF)   members = members.filter(m => m.name.toLowerCase().includes(nameF));
+  if (ratingF) members = members.filter(m => tierLabel(m.totalFats) === ratingF);
+
+  _filteredRows = members;
+  applySort();
+}
+
+function applySort() {
+  const { col, dir } = _sortState;
+  _filteredRows = [..._filteredRows].sort((a, b) => {
+    let av = a[col] ?? '', bv = b[col] ?? '';
+    if (typeof av === 'string') return dir * av.toLowerCase().localeCompare(bv.toLowerCase());
+    return dir * (av - bv);
+  });
+  buildTableHeaders();
+  renderTableBody();
+}
+
+function sortBy(col) {
+  _sortState = (_sortState.col === col)
+    ? { col, dir: _sortState.dir === -1 ? 1 : -1 }
+    : { col, dir: -1 };
+  applySort();
+}
+
+// ── Report: build headers ─────────────────────────────────────────────────────
+function buildTableHeaders() {
+  if (!_reportData) return;
+  const year = _reportData.year;
+  const months = getMonths(year);
+
+  const cols = [
+    { label: '#',           key: null,            sort: false },
+    { label: 'PILOT NAME',  key: 'name',           sort: true  },
+    { label: 'ASSET BASE',  key: 'topAssetSystem', sort: true  },
+  ];
+  if (_reportData.type === 'alliance')
+    cols.push({ label: 'CORPORATION', key: '_corp', sort: true });
+
+  cols.push(
+    { label: 'CORP JOINED',  key: 'joinDate',      sort: true  },
+    { label: 'IN ALLIANCE',  key: 'timeInCorp',    sort: false },
+    { label: 'SP (M)',        key: 'skillpointsM',  sort: true  },
+    { label: 'LAST LOGIN',   key: 'lastLogin',     sort: true  },
+    { label: 'SEC',          key: 'secStatus',     sort: true  },
+    { label: 'TOTAL FATs',   key: 'totalFats',     sort: true  },
+    ...months.map(mo => ({ label: mo.label, key: null, sort: false })),
+    { label: 'RATING',       key: null,            sort: false },
+  );
+
+  const thead = document.getElementById('rt-head');
+  thead.innerHTML = '';
+  const tr = document.createElement('tr');
+  cols.forEach(c => {
+    const th = document.createElement('th');
+    if (c.sort) {
+      th.className = 'sortable';
+      if (_sortState.col === c.key)
+        th.className += _sortState.dir === -1 ? ' s-desc' : ' s-asc';
+      th.onclick = () => sortBy(c.key);
+    }
+    th.innerHTML = escHtml(c.label) + (c.sort ? '<span class="sa"></span>' : '');
+    tr.appendChild(th);
+  });
+  thead.appendChild(tr);
+}
+
+// ── Report: render body ───────────────────────────────────────────────────────
+function renderTableBody() {
+  if (!_reportData) return;
+  const year   = _reportData.year;
+  const months = getMonths(year);
+  const tbody  = document.getElementById('rt-body');
+  tbody.innerHTML = '';
+
+  _filteredRows.forEach((m, i) => {
+    const [tier, cls] = tierInfo(m.totalFats);
+    const tr = document.createElement('tr');
+
+    const cells = [
+      td(i + 1,                              'center', '#8B949E'),
+      td(m.name,                             'left',   '#FFFFFF', true),
+      td(m.topAssetSystem || '—',            'left',   m.topAssetSystem ? '#00BFFF' : '#8B949E'),
+    ];
+    if (_reportData.type === 'alliance')
+      cells.push(td(m._corp || '—', 'left', '#8B949E'));
+
+    cells.push(
+      td(m.joinDate   || '—',              'center', '#8B949E'),
+      td(m.timeInCorp || m.born || '—',   'center', '#8B949E'),
+      td(m.skillpointsM ? m.skillpointsM.toFixed(1) : '—', 'center',
+         m.skillpointsM >= 80 ? '#00E5CC' : m.skillpointsM >= 30 ? '#FFD700' : '#FFFFFF'),
+      td(m.lastLogin  || '—',              'center', '#8B949E'),
+      td(m.secStatus  != null ? m.secStatus.toFixed(1) : '—', 'center',
+         m.secStatus < 0 ? '#C0392B' : m.secStatus < 2 ? '#FFD700' : '#27AE60'),
+      td(m.totalFats,                      'center', fatColor(m.totalFats), true),
+      ...months.map(mo => {
+        const n = m.fatsByMonth?.[mo.key] || 0;
+        return td(n || '—', 'center', n ? '#00E5CC' : '#8B949E');
+      }),
+    );
+
+    // Rating badge
+    const ratingTd = document.createElement('td');
+    ratingTd.style.textAlign = 'center';
+    const badge = document.createElement('span');
+    badge.className = `rt-badge rt-${cls}`;
+    badge.textContent = tier;
+    ratingTd.appendChild(badge);
+
+    cells.forEach(c => tr.appendChild(c));
+    tr.appendChild(ratingTd);
+    tbody.appendChild(tr);
+  });
+
+  // Summary bar
+  const n      = _filteredRows.length;
+  const total  = _reportData.type === 'corp'
+    ? _reportData.members.length
+    : _reportData.corps.reduce((s, c) => s + c.members.length, 0);
+  const active = _filteredRows.filter(m => m.totalFats > 0).length;
+  const elite  = _filteredRows.filter(m => m.totalFats >= 8).length;
+  const ghost  = _filteredRows.filter(m => m.totalFats === 0).length;
+  const pct    = n ? Math.round(active / n * 100) : 0;
+  document.getElementById('rpt-summary').textContent =
+    `${n}${n !== total ? ' / ' + total : ''} pilots  ·  ${pct}% participation  ·  ★${elite}  ○${ghost}`;
+}
+
+// ── Report helpers ────────────────────────────────────────────────────────────
+function td(text, align, color, bold = false) {
+  const el = document.createElement('td');
+  el.textContent = text;
+  el.style.textAlign = align;
+  el.style.color     = color;
+  if (bold) el.style.fontWeight = 'bold';
+  return el;
+}
+
+function getMonths(year) {
+  const now   = new Date();
+  const maxM  = year === now.getFullYear() ? now.getMonth() + 1 : 12;
+  const abbrs = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return abbrs.slice(0, maxM).map(m => ({ key: `${year}-${m}`, label: `${m} '${String(year).slice(2)}` }));
+}
+
+function tierLabel(n) {
+  if (n >= 8) return 'ELITE';
+  if (n >= 4) return 'ACTIVE';
+  if (n >= 1) return 'PARTIAL';
+  return 'GHOST';
+}
+
+function tierInfo(n) {
+  if (n >= 8) return ['★ ELITE',   'elite'];
+  if (n >= 4) return ['◆ ACTIVE',  'active'];
+  if (n >= 1) return ['▷ PARTIAL', 'partial'];
+  return            ['○ GHOST',   'ghost'];
+}
+
+function fatColor(n) {
+  if (n >= 8) return '#00E5CC';
+  if (n >= 4) return '#27AE60';
+  if (n >= 1) return '#FFD700';
+  return '#C0392B';
+}
+
 // ── Log helpers ───────────────────────────────────────────────────────────────
 function logLine(text, tag) {
-  const el  = document.getElementById('log');
-  const cls = tag ? `t-${tag}` : 't-white';
+  const el = document.getElementById('log');
   const span = document.createElement('span');
-  span.className = cls;
+  span.className = tag ? `t-${tag}` : 't-white';
   span.textContent = text + '\n';
   el.appendChild(span);
   el.scrollTop = el.scrollHeight;
 }
-function logDivider() {
-  logLine('─'.repeat(56), 'grey');
-}
-function clearLog() {
-  document.getElementById('log').innerHTML = '';
-}
+function logDivider() { logLine('─'.repeat(56), 'grey'); }
+function clearLog()   { document.getElementById('log').innerHTML = ''; }
 
 // ── UI state ──────────────────────────────────────────────────────────────────
 function setRunning(state) {
@@ -665,9 +769,7 @@ function setRunning(state) {
   document.getElementById('btn-alliance').disabled = state;
   status(state ? '⏳ Audit running — see log for progress…' : 'Done.');
 }
-function status(msg) {
-  document.getElementById('statusbar').textContent = msg;
-}
+function status(msg) { document.getElementById('statusbar').textContent = msg; }
 function setBadge(id, text, cls) {
   const el = document.getElementById(id);
   el.textContent = text;

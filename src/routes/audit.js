@@ -75,7 +75,13 @@ module.exports = (app) => {
       try {
         const corp  = await collectCorp(auth, esi, EXTRA_PROVIDERS, corp_id, corp_name, year, log);
         const fname = `sob_corp_${safeFilename(corp_name)}_${today()}.pdf`;
-        await buildCorpPdf(corp_name, corp.members, year, path.join(REPORTS_DIR, fname));
+        await Promise.all([
+          buildCorpPdf(corp_name, corp.members, year, path.join(REPORTS_DIR, fname)),
+          fs.promises.writeFile(
+            path.join(REPORTS_DIR, fname.replace('.pdf', '.json')),
+            JSON.stringify({ type: 'corp', corpName: corp_name, year, generatedAt: new Date().toISOString(), members: corp.members }),
+          ),
+        ]);
         job.resultFile = fname;
         log(`[✓] Report ready: ${fname}`, 'green');
       } catch (e) {
@@ -109,9 +115,15 @@ module.exports = (app) => {
       try {
         const corps = await collectAlliance(auth, esi, EXTRA_PROVIDERS, year, log);
         const fname = `sob_alliance_${today()}.pdf`;
-        await buildAlliancePdf(corps, year, path.join(REPORTS_DIR, fname));
-        job.resultFile = fname;
         const total = corps.reduce((s, c) => s + c.members.length, 0);
+        await Promise.all([
+          buildAlliancePdf(corps, year, path.join(REPORTS_DIR, fname)),
+          fs.promises.writeFile(
+            path.join(REPORTS_DIR, fname.replace('.pdf', '.json')),
+            JSON.stringify({ type: 'alliance', year, generatedAt: new Date().toISOString(), corps: corps.map(c => ({ corpId: c.corpId, name: c.name, members: c.members })) }),
+          ),
+        ]);
+        job.resultFile = fname;
         log(`[★] Alliance report ready: ${fname}  (${corps.length} corps, ${total} mains)`, 'gold');
       } catch (e) {
         log(`[!] ${e.message}`, 'red');
@@ -119,6 +131,16 @@ module.exports = (app) => {
         job.done = true;
       }
     })();
+  });
+
+  // ── REST: report data (JSON for in-app viewer) ─────────────────────────────
+  app.get('/api/reports/:filename/data', requireMember, (req, res) => {
+    const fname = req.params.filename;
+    if (!fname.endsWith('.pdf') || fname.includes('..'))
+      return res.status(400).json({ detail: 'Invalid filename.' });
+    const jsonPath = path.join(REPORTS_DIR, fname.replace('.pdf', '.json'));
+    if (!fs.existsSync(jsonPath)) return res.status(404).json({ detail: 'Report data not found.' });
+    res.sendFile(jsonPath);
   });
 
   // ── REST: download report ───────────────────────────────────────────────────
