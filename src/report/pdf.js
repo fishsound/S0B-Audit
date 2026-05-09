@@ -15,18 +15,18 @@ const FONT_BOLD_PATH = path.join(__dirname, '../fonts/DejaVuSans-Bold.ttf');
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const C = {
-  BG_DARK:   '#0D1117',
-  BG_MID:    '#161B22',
-  BG_LIGHT:  '#1F2937',
-  CYAN:      '#00BFFF',
-  TEAL:      '#00E5CC',
-  GOLD:      '#FFD700',
+  BG_DARK:   '#060806',
+  BG_MID:    '#0D120A',
+  BG_LIGHT:  '#151E0E',
+  CYAN:      '#8BB220',   // lime green — primary accent
+  TEAL:      '#A4CC28',   // bright chartreuse — elite / highlights
+  GOLD:      '#D4A820',   // gold — partial / warning
   RED:       '#C0392B',
-  GREEN:     '#27AE60',
-  GREY:      '#8B949E',
+  GREEN:     '#78A820',   // olive-lime — active / good
+  GREY:      '#7A8870',
   WHITE:     '#FFFFFF',
-  HEADER_BG: '#0A3D62',
-  BORDER:    '#2D3748',
+  HEADER_BG: '#122008',   // dark forest green
+  BORDER:    '#1E3010',
 };
 
 const MARGIN      = 20;

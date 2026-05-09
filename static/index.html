@@ -6,18 +6,18 @@
 <title>◈ SONS of BANE · Alliance Audit Tool ◈</title>
 <style>
   :root {
-    --bg:      #0D1117;
-    --bg-mid:  #161B22;
-    --bg-light:#1F2937;
-    --cyan:    #00BFFF;
-    --teal:    #00E5CC;
-    --gold:    #FFD700;
+    --bg:      #060806;
+    --bg-mid:  #0D120A;
+    --bg-light:#151E0E;
+    --cyan:    #8BB220;
+    --teal:    #A4CC28;
+    --gold:    #D4A820;
     --red:     #C0392B;
-    --green:   #27AE60;
-    --grey:    #8B949E;
+    --green:   #78A820;
+    --grey:    #7A8870;
     --white:   #FFFFFF;
-    --header:  #0A3D62;
-    --border:  #2D3748;
+    --header:  #122008;
+    --border:  #1E3010;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -70,7 +70,7 @@
   .user-bar { display: flex; align-items: center; gap: 8px; font-size: 11px; white-space: nowrap; min-width: 180px; justify-content: flex-end; }
   .role-badge { font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.5px; text-transform: uppercase; }
   .role-member  { background: var(--header); color: var(--cyan);  border: 1px solid var(--cyan); }
-  .role-officer { background: #014d40;       color: var(--teal);  border: 1px solid var(--teal); }
+  .role-officer { background: #0A2005;       color: var(--teal);  border: 1px solid var(--teal); }
   .role-admin   { background: #3d2f00;       color: var(--gold);  border: 1px solid var(--gold); }
   .logout-link  { color: var(--grey); text-decoration: none; font-size: 10px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 3px; transition: color 0.1s, border-color 0.1s; }
   .logout-link:hover { color: var(--red); border-color: var(--red); }
@@ -176,7 +176,7 @@
   #report-table th:not(.s-asc):not(.s-desc) .sa::after { content: '⇅'; }
   #report-table td {
     padding: 3px 6px; white-space: nowrap;
-    border-bottom: 1px solid #1a2030; border-right: 1px solid #1a2030;
+    border-bottom: 1px solid #131D0A; border-right: 1px solid #131D0A;
   }
   #report-table tr:nth-child(even) td { background: var(--bg-mid);   }
   #report-table tr:nth-child(odd)  td { background: var(--bg-light); }
@@ -665,23 +665,23 @@ function renderTableBody() {
     const tr = document.createElement('tr');
 
     const cells = [
-      td(i + 1,                              'center', '#8B949E'),
+      td(i + 1,                              'center', '#7A8870'),
       td(m.name,                             'left',   '#FFFFFF', true),
-      td(m.topAssetSystem || '—',            'left',   m.topAssetSystem ? '#27AE60' : '#8B949E'),
+      td(m.topAssetSystem || '—',            'left',   m.topAssetSystem ? '#78A820' : '#7A8870'),
     ];
     if (_reportData.type === 'alliance')
-      cells.push(td(m._corp || '—', 'left', '#8B949E'));
+      cells.push(td(m._corp || '—', 'left', '#7A8870'));
 
     cells.push(
-      td(m.joinDate   || '—',              'center', '#8B949E'),
-      td(m.timeInCorp || m.born || '—',   'center', '#8B949E'),
+      td(m.joinDate   || '—',              'center', '#7A8870'),
+      td(m.timeInCorp || m.born || '—',   'center', '#7A8870'),
       td(m.altCount != null ? m.altCount : 0, 'center',
-         m.altCount > 0 ? '#00E5CC' : '#8B949E'),
-      td(m.lastLogin  || '—',              'center', '#8B949E'),
+         m.altCount > 0 ? '#A4CC28' : '#7A8870'),
+      td(m.lastLogin  || '—',              'center', '#7A8870'),
       td(m.totalFats,                      'center', fatColor(m.totalFats), true),
       ...months.map(mo => {
         const n = m.fatsByMonth?.[mo.key] || 0;
-        return td(n || '—', 'center', n ? '#00E5CC' : '#8B949E');
+        return td(n || '—', 'center', n ? '#A4CC28' : '#7A8870');
       }),
     );
 
@@ -743,9 +743,9 @@ function tierInfo(n) {
 }
 
 function fatColor(n) {
-  if (n >= 8) return '#00E5CC';
-  if (n >= 4) return '#27AE60';
-  if (n >= 1) return '#FFD700';
+  if (n >= 8) return '#A4CC28';
+  if (n >= 4) return '#78A820';
+  if (n >= 1) return '#D4A820';
   return '#C0392B';
 }
 
