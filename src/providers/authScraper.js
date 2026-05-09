@@ -301,11 +301,14 @@ class AllianceAuthProvider extends BaseProvider {
   // ── Alt counting ──────────────────────────────────────────────────────────
 
   async _buildAltCountMap() {
-    const all = await this._finderRaw(''); // hits cache after first call
+    const all = await this._finderRaw('');
     const map = new Map();
     for (const r of all) {
       if (r.length < 13 || r[10] === 'yes') continue;
-      const mainName = cheerio.load(r[2] || '')('body').text().trim();
+      // column 2 (main_character) has the same HTML format as column 0 —
+      // an anchor pointing to /member-audit/character_viewer/<pk>/ with the
+      // character name as link text.  Reuse _parseNameCell for reliable extraction.
+      const [, mainName] = this._parseNameCell(r[2] || '');
       if (mainName) map.set(mainName, (map.get(mainName) || 0) + 1);
     }
     return map;
