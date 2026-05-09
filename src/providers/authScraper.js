@@ -298,10 +298,27 @@ class AllianceAuthProvider extends BaseProvider {
     }
   }
 
+  // ── Alt counting ──────────────────────────────────────────────────────────
+
+  async _buildAltCountMap() {
+    const all = await this._finderRaw(''); // hits cache after first call
+    const map = new Map();
+    for (const r of all) {
+      if (r.length < 13 || r[10] === 'yes') continue;
+      const mainName = cheerio.load(r[2] || '')('body').text().trim();
+      if (mainName) map.set(mainName, (map.get(mainName) || 0) + 1);
+    }
+    return map;
+  }
+
   // ── Provider entry-point ──────────────────────────────────────────────────
 
   async enrich(chars, corpId, corpName, year, log) {
     const today = new Date();
+
+    log(`      building alt counts…`, 'grey');
+    const altMap = await this._buildAltCountMap();
+    for (const ch of chars) ch.altCount = altMap.get(ch.name) || 0;
 
     log(`      fetching overviews (${chars.length} chars)…`, 'grey');
     await Promise.all(chars.map(ch => this._limit(async () => {

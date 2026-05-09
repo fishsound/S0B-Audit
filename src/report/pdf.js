@@ -156,8 +156,8 @@ function rosterCols(year) {
   // Landscape A4 usable width ≈ 802pt
   const usable  = 841.89 - 2 * MARGIN;
   const months  = yearMonths(year);
-  // Fixed columns: #, name, asset base, joined, alliance, sp, login, sec, total, rating
-  const fixed   = [14, 85, 65, 50, 62, 30, 50, 24, 29, 40];
+  // Fixed columns: #, name, asset base, joined, alliance, login, alts, total, rating
+  const fixed   = [14, 90, 68, 50, 62, 50, 26, 29, 40];
   const fixedW  = fixed.reduce((a, b) => a + b, 0);
   const moW     = Math.floor((usable - fixedW) / months.length);
   return { fixed, moW, months, usable };
@@ -167,7 +167,7 @@ function rosterHeader(year) {
   const { months } = rosterCols(year);
   return [
     '#', 'PILOT NAME', 'ASSET BASE', 'CORP JOINED', 'IN ALLIANCE',
-    'SP (M)', 'LAST LOGIN', 'SEC', 'FATs',
+    'LAST LOGIN', 'ALTS', 'FATs',
     ...months.map(m => `${m} '${String(year).slice(2)}`),
     'RATING',
   ];
@@ -180,20 +180,16 @@ function rosterColWidths(year) {
 
 function rosterRow(ch, idx, year) {
   const [tier, tc] = tierInfo(ch.totalFats);
-  const sp   = ch.skillpointsM ? `${ch.skillpointsM.toFixed(1)}` : '—';
-  const spC  = ch.skillpointsM >= 80 ? C.TEAL : ch.skillpointsM >= 30 ? C.GOLD : C.WHITE;
-  const secC = ch.secStatus < 0 ? C.RED : ch.secStatus < 2 ? C.GOLD : C.GREEN;
   const months = yearMonths(year);
 
   return [
-    { text: idx + 1,      color: C.GREY,            align: 'center' },
+    { text: idx + 1,      color: C.GREY,             align: 'center' },
     { text: ch.name,      color: C.WHITE, bold: true, align: 'left'  },
-    { text: ch.topAssetSystem || '—', color: C.CYAN, align: 'left'  },
-    { text: ch.joinDate  || '—', color: C.GREY,      align: 'center' },
+    { text: ch.topAssetSystem || '—', color: C.GREEN, align: 'left'  },
+    { text: ch.joinDate  || '—', color: C.GREY,       align: 'center' },
     { text: ch.timeInCorp || ch.born || '—', color: C.GREY, align: 'center' },
-    { text: sp,           color: spC,                align: 'center' },
-    { text: ch.lastLogin || '—', color: C.GREY,      align: 'center' },
-    { text: ch.secStatus.toFixed(1), color: secC,    align: 'center' },
+    { text: ch.lastLogin || '—', color: C.GREY,       align: 'center' },
+    { text: ch.altCount || 0,   color: ch.altCount > 0 ? C.TEAL : C.GREY, align: 'center' },
     { text: ch.totalFats, color: fatColor(ch.totalFats), bold: true, align: 'center' },
     ...months.map(mo => {
       const n = ch.fatsByMonth[`${year}-${mo}`] || 0;

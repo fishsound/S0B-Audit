@@ -594,7 +594,9 @@ function filterReport() {
 function applySort() {
   const { col, dir } = _sortState;
   _filteredRows = [..._filteredRows].sort((a, b) => {
-    let av = a[col] ?? '', bv = b[col] ?? '';
+    // month keys (e.g. "2026-Jan") live in fatsByMonth, not on the row directly
+    const av = col in a ? (a[col] ?? '') : (a.fatsByMonth?.[col] ?? 0);
+    const bv = col in b ? (b[col] ?? '') : (b.fatsByMonth?.[col] ?? 0);
     if (typeof av === 'string') return dir * av.toLowerCase().localeCompare(bv.toLowerCase());
     return dir * (av - bv);
   });
@@ -626,11 +628,10 @@ function buildTableHeaders() {
   cols.push(
     { label: 'CORP JOINED',  key: 'joinDate',      sort: true  },
     { label: 'IN ALLIANCE',  key: 'timeInCorp',    sort: false },
-    { label: 'SP (M)',        key: 'skillpointsM',  sort: true  },
+    { label: 'ALTS',         key: 'altCount',      sort: true  },
     { label: 'LAST LOGIN',   key: 'lastLogin',     sort: true  },
-    { label: 'SEC',          key: 'secStatus',     sort: true  },
     { label: 'TOTAL FATs',   key: 'totalFats',     sort: true  },
-    ...months.map(mo => ({ label: mo.label, key: null, sort: false })),
+    ...months.map(mo => ({ label: mo.label, key: mo.key, sort: true })),
     { label: 'RATING',       key: null,            sort: false },
   );
 
@@ -666,7 +667,7 @@ function renderTableBody() {
     const cells = [
       td(i + 1,                              'center', '#8B949E'),
       td(m.name,                             'left',   '#FFFFFF', true),
-      td(m.topAssetSystem || '—',            'left',   m.topAssetSystem ? '#00BFFF' : '#8B949E'),
+      td(m.topAssetSystem || '—',            'left',   m.topAssetSystem ? '#27AE60' : '#8B949E'),
     ];
     if (_reportData.type === 'alliance')
       cells.push(td(m._corp || '—', 'left', '#8B949E'));
@@ -674,11 +675,9 @@ function renderTableBody() {
     cells.push(
       td(m.joinDate   || '—',              'center', '#8B949E'),
       td(m.timeInCorp || m.born || '—',   'center', '#8B949E'),
-      td(m.skillpointsM ? m.skillpointsM.toFixed(1) : '—', 'center',
-         m.skillpointsM >= 80 ? '#00E5CC' : m.skillpointsM >= 30 ? '#FFD700' : '#FFFFFF'),
+      td(m.altCount != null ? m.altCount : 0, 'center',
+         m.altCount > 0 ? '#00E5CC' : '#8B949E'),
       td(m.lastLogin  || '—',              'center', '#8B949E'),
-      td(m.secStatus  != null ? m.secStatus.toFixed(1) : '—', 'center',
-         m.secStatus < 0 ? '#C0392B' : m.secStatus < 2 ? '#FFD700' : '#27AE60'),
       td(m.totalFats,                      'center', fatColor(m.totalFats), true),
       ...months.map(mo => {
         const n = m.fatsByMonth?.[mo.key] || 0;

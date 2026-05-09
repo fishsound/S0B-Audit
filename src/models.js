@@ -24,6 +24,7 @@ function makeCharacter(pk, name) {
     fatsByYear:    {},
     fatsByMonth:   {},
     topAssetSystem: '',
+    altCount:       0,
     // Extensible bucket — new providers write keyed sub-objects here,
     // e.g. providerData.zkillboard = { kills: 42, efficiency: 0.87 }
     providerData: {},
