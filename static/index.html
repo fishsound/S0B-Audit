@@ -263,6 +263,11 @@
           <label>Audit Year</label>
           <select id="year-select"></select>
         </div>
+        <div>
+          <label>AFAT CSV — current month supplement (optional)</label>
+          <input type="file" id="fat-csv" accept=".csv"
+            style="padding:4px 0;background:transparent;border:none;color:var(--grey);font-size:11px;cursor:pointer;width:100%"/>
+        </div>
         <button class="btn-cyan btn-full" onclick="runCorp()" id="btn-corp">▶ Run Corp Report</button>
         <button class="btn-gold btn-full" onclick="runAlliance()" id="btn-alliance">★ Run ALL SONS of BANE Corps</button>
       </div>
@@ -465,6 +470,35 @@ async function loadCorps() {
 }
 
 // ── Audit runners ─────────────────────────────────────────────────────────────
+
+// Reads the optional AFAT CSV and returns { pilotName: fatCount } or null.
+async function readFatCsv() {
+  const fileInput = document.getElementById('fat-csv');
+  if (!fileInput.files.length) return null;
+  const text = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = e => resolve(e.target.result);
+    reader.onerror = () => reject(new Error('Failed to read CSV'));
+    reader.readAsText(fileInput.files[0]);
+  });
+  const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return null;
+  const headers = lines[0].split(',').map(h => h.trim());
+  const accIdx  = headers.indexOf('Account');
+  const totIdx  = headers.indexOf('Total');
+  if (accIdx === -1 || totIdx === -1) return null;
+  const result = {};
+  for (const line of lines.slice(1)) {
+    const vals = line.split(',');
+    const name = (vals[accIdx] || '').trim();
+    const tot  = parseInt(vals[totIdx]) || 0;
+    if (name) result[name] = tot;
+  }
+  const count = Object.keys(result).length;
+  if (count) logLine(`[csv] Loaded FAT data for ${count} pilots from ${fileInput.files[0].name}`, 'teal');
+  return count ? result : null;
+}
+
 async function runCorp() {
   if (_running) return;
   const sel = document.getElementById('corp-select');
@@ -476,9 +510,10 @@ async function runCorp() {
   logDivider();
   logLine(`[▶] Corp audit: ${corp.name}  (${year})`, 'cyan');
 
+  const csvFats = await readFatCsv().catch(() => null);
   const r = await apiFetch('/api/audit/corp', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({corp_id: corp.id, corp_name: corp.name, year}),
+    body: JSON.stringify({corp_id: corp.id, corp_name: corp.name, year, csvFats}),
   });
   if (!r) return;
   if (!r.ok) { const e = await r.json(); logLine(`[!] ${e.detail}`, 'red'); return; }
@@ -494,9 +529,10 @@ async function runAlliance() {
   logDivider();
   logLine(`[★] Alliance-wide audit  (${year})`, 'gold');
 
+  const csvFats = await readFatCsv().catch(() => null);
   const r = await apiFetch('/api/audit/alliance', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({year}),
+    body: JSON.stringify({year, csvFats}),
   });
   if (!r) return;
   if (!r.ok) { const e = await r.json(); logLine(`[!] ${e.detail}`, 'red'); return; }
