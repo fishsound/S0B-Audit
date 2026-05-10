@@ -7,7 +7,7 @@ const path   = require('path');
 const { collectCorp, collectAlliance } = require('../audit');
 const { REPORTS_DIR, ENV_FILE }        = require('../config');
 const { AllianceAuthProvider, ESIProvider, EXTRA_PROVIDERS } = require('../providers');
-const { buildCorpPdf, buildAlliancePdf } = require('../report/pdf');
+const { buildCorpPdf, buildAlliancePdf, buildCsvPdf } = require('../report/pdf');
 const { loadCredentials } = require('../utils');
 const { requireMember, requireAdmin } = require('../middleware');
 
@@ -27,6 +27,54 @@ function safeFilename(s) {
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+// ── CSV helpers ───────────────────────────────────────────────────────────────
+
+const CSV_FLEET_TYPES = [
+  '*IGC', '*TNT', 'Beehive', 'Corp', 'Cricket', 'GSOL',
+  'Incursion-HQ', 'Incursion-VG', 'Locust', 'PEACETIME', 'SCOUTS',
+  'SIG/SQUAD', 'SIG/SQUAD Strategic', 'STRATEGIC', 'Survey',
+];
+
+const CSV_SHIP_TYPES = [
+  'Assault Frigate', 'Attack Battlecruiser', 'Battleship', 'Black Ops',
+  'Blockade Runner', 'Capital Industrial Ship', 'Capsule', 'Carrier',
+  'Combat Battlecruiser', 'Combat Recon Ship', 'Command Destroyer',
+  'Command Ship', 'Corvette', 'Cruiser', 'Deep Space Transport',
+  'Destroyer', 'Dreadnought', 'Electronic Attack Ship', 'Exhumer',
+  'Force Auxiliary', 'Force Recon Ship', 'Frigate', 'Hauler',
+  'Heavy Assault Cruiser', 'Heavy Interdiction Cruiser', 'Interceptor',
+  'Interdictor', 'Jump Freighter', 'Logistics', 'Logistics Frigate',
+  'Marauder', 'Shuttle', 'Stealth Bomber', 'Strategic Cruiser',
+  'Supercarrier', 'Tactical Destroyer', 'Titan',
+];
+
+function parseCsvText(text) {
+  const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.trim());
+  return lines.slice(1).map(line => {
+    const vals = line.split(',').map(v => v.trim());
+    const row  = {};
+    headers.forEach((h, i) => { row[h] = vals[i] || ''; });
+    return row;
+  });
+}
+
+function csvRowToMember(row) {
+  const name = (row['Account'] || '').trim();
+  if (!name) return null;
+  const totalFats  = parseInt(row['Total']) || 0;
+  const fleetTypes = {};
+  for (const ft of CSV_FLEET_TYPES) fleetTypes[ft] = parseInt(row[ft]) || 0;
+  let topShip = '—', topN = 0;
+  for (const st of CSV_SHIP_TYPES) {
+    const n = parseInt(row[st]) || 0;
+    if (n > topN) { topN = n; topShip = st; }
+  }
+  const incursion = (fleetTypes['Incursion-HQ'] || 0) + (fleetTypes['Incursion-VG'] || 0);
+  return { name, totalFats, fleetTypes, incursion, topShip };
 }
 
 module.exports = (app) => {
@@ -125,6 +173,43 @@ module.exports = (app) => {
         ]);
         job.resultFile = fname;
         log(`[★] Alliance report ready: ${fname}  (${corps.length} corps, ${total} mains)`, 'gold');
+      } catch (e) {
+        log(`[!] ${e.message}`, 'red');
+      } finally {
+        job.done = true;
+      }
+    })();
+  });
+
+  // ── REST: CSV fleet-activity import ────────────────────────────────────────
+  app.post('/api/audit/csv', requireMember, (req, res) => {
+    const { csv: csvText, reportName = 'Fleet Activity' } = req.body;
+    if (!csvText || typeof csvText !== 'string')
+      return res.status(400).json({ detail: 'No CSV data provided.' });
+    const rows = parseCsvText(csvText);
+    if (!rows.length) return res.status(400).json({ detail: 'CSV has no data rows.' });
+    const members = rows.map(csvRowToMember).filter(Boolean);
+    if (!members.length) return res.status(400).json({ detail: 'No valid members in CSV.' });
+
+    const jobId = createJob();
+    const job   = jobs.get(jobId);
+    res.json({ job_id: jobId });
+
+    fs.mkdirSync(REPORTS_DIR, { recursive: true });
+    (async () => {
+      const log = (msg, tag = 'white') => job.messages.push({ msg, tag });
+      try {
+        const fname = `sob_csv_${safeFilename(reportName)}_${today()}.pdf`;
+        log(`[▶] Building CSV report: ${reportName}  (${members.length} pilots)…`, 'cyan');
+        await Promise.all([
+          buildCsvPdf(reportName, members, path.join(REPORTS_DIR, fname)),
+          fs.promises.writeFile(
+            path.join(REPORTS_DIR, fname.replace('.pdf', '.json')),
+            JSON.stringify({ type: 'csv', reportName, generatedAt: new Date().toISOString(), members }),
+          ),
+        ]);
+        job.resultFile = fname;
+        log(`[✓] Report ready: ${fname}`, 'green');
       } catch (e) {
         log(`[!] ${e.message}`, 'red');
       } finally {

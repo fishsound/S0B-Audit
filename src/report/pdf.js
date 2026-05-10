@@ -234,6 +234,136 @@ function summaryRows(members, year) {
   ];
 }
 
+// ── CSV report helpers ────────────────────────────────────────────────────────
+
+// Columns: #, PILOT, TOTAL, STRATEGIC, SIG/SQUAD, SIG STR, PEACETIME, CORP,
+//          SCOUTS, INCURSION, BEEHIVE, TOP SHIP, RATING  (sum = 802pt)
+const CSV_HDR = ['#', 'PILOT', 'TOTAL', 'STRATEGIC', 'SIG/SQUAD', 'SIG STR',
+                 'PEACETIME', 'CORP', 'SCOUTS', 'INCURSION', 'BEEHIVE', 'TOP SHIP', 'RATING'];
+const CSV_W   = [14, 150, 38, 55, 50, 50, 50, 38, 42, 50, 42, 173, 50];
+
+function csvSummaryRows(members) {
+  const n       = members.length;
+  const anyFats = members.filter(m => m.totalFats > 0).length;
+  const total   = members.reduce((s, m) => s + m.totalFats, 0);
+  const elite   = members.filter(m => m.totalFats >= 8).length;
+  const active  = members.filter(m => m.totalFats >= 4 && m.totalFats < 8).length;
+  const partial = members.filter(m => m.totalFats >= 1 && m.totalFats < 4).length;
+  const pct     = n ? `${Math.round(anyFats / n * 100)}%` : '—';
+
+  const ftTotals = {};
+  for (const m of members)
+    for (const [k, v] of Object.entries(m.fleetTypes || {}))
+      ftTotals[k] = (ftTotals[k] || 0) + v;
+  const topFt = Object.entries(ftTotals).sort(([, a], [, b]) => b - a)[0];
+
+  const row = (label, val, vc = C.WHITE) => [
+    { text: label, color: C.GREY, align: 'left' },
+    { text: String(val), color: vc, bold: true, align: 'left' },
+  ];
+  return [
+    ['METRIC', 'VALUE'],
+    row('Total Pilots',           n,                      C.TEAL),
+    row('FAT Participation Rate', pct,                    C.GOLD),
+    row('Pilots with ANY FATs',   anyFats,                C.GREEN),
+    row('Ghost Members (0 FATs)', n - anyFats,            C.RED),
+    row('★ Elite (8+ FATs)',      elite,                  C.TEAL),
+    row('◆ Active (4–7 FATs)',    active,                 C.GREEN),
+    row('▷ Partial (1–3 FATs)',   partial,                C.GOLD),
+    row('Total FATs',             total,                  C.TEAL),
+    ...(topFt ? [row(`Top Fleet: ${topFt[0]}`, topFt[1], C.CYAN)] : []),
+    row('Report Date',            new Date().toISOString().slice(0, 10), C.GREY),
+  ];
+}
+
+function csvRosterRow(m, idx) {
+  const [tier, tc] = tierInfo(m.totalFats);
+  const ft = m.fleetTypes || {};
+  const cv = (key, color) => {
+    const n = ft[key] || 0;
+    return { text: n || '—', color: n ? color : C.GREY, align: 'center' };
+  };
+  const incurs = (ft['Incursion-HQ'] || 0) + (ft['Incursion-VG'] || 0);
+  return [
+    { text: idx + 1,      color: C.GREY,                align: 'center' },
+    { text: m.name,       color: C.WHITE, bold: true,   align: 'left'   },
+    { text: m.totalFats,  color: fatColor(m.totalFats), bold: true, align: 'center' },
+    cv('STRATEGIC',            C.TEAL),
+    cv('SIG/SQUAD',            C.CYAN),
+    cv('SIG/SQUAD Strategic',  C.CYAN),
+    cv('PEACETIME',            C.GREEN),
+    cv('Corp',                 C.GREEN),
+    cv('SCOUTS',               C.GREEN),
+    { text: incurs || '—', color: incurs ? C.GOLD : C.GREY, align: 'center' },
+    cv('Beehive',              C.GREEN),
+    { text: m.topShip || '—', color: C.GREY, align: 'left' },
+    { text: tier, color: tc, bold: true, align: 'center' },
+  ];
+}
+
+async function buildCsvPdf(reportName, members, outPath) {
+  const sorted = [...members].sort((a, b) => b.totalFats - a.totalFats);
+  const doc    = makePdf(outPath, `${reportName} — SoB Fleet Report`);
+  const pw     = doc.page.width;
+  const finish = pipeToFile(doc, outPath);
+
+  // ── Page 1: Summary ──────────────────────────────────────────────────────
+  let y = MARGIN;
+  y = drawTitle(doc,
+    `◈  ${reportName.toUpperCase()}  ·  FLEET ACTIVITY REPORT  ◈`,
+    `Sons of Bane Alliance  ·  EVE Online  ·  ${new Date().toISOString().slice(0, 10)}  ·  ${sorted.length} Pilots`,
+    y,
+  );
+
+  const colGap = 10;
+  const leftW  = (pw - 2 * MARGIN) * 0.42;
+  const rightW = (pw - 2 * MARGIN) - leftW - colGap;
+  const leftX  = MARGIN;
+  const rightX = MARGIN + leftW + colGap;
+
+  drawTable(doc, csvSummaryRows(sorted), [leftW * 0.65, leftW * 0.35], leftX, y);
+
+  let ry = y;
+  const topRows = [
+    ['PILOT', 'FATs', 'RATING'],
+    ...sorted.slice(0, 10).map(m => {
+      const [tier, tc] = tierInfo(m.totalFats);
+      return [
+        { text: m.name, align: 'left', bold: true },
+        { text: m.totalFats, color: fatColor(m.totalFats), bold: true },
+        { text: tier, color: tc },
+      ];
+    }),
+  ];
+  ry = drawTable(doc, topRows, [rightW * 0.55, rightW * 0.2, rightW * 0.25], rightX, ry);
+
+  ry += 8;
+  const ghosts = sorted.filter(m => m.totalFats === 0).slice(0, 12);
+  if (ghosts.length) {
+    drawTable(doc, [
+      ['⚠ GHOST MEMBER', 'TOP SHIP'],
+      ...ghosts.map(m => [
+        { text: m.name,         color: C.GREY, align: 'left' },
+        { text: m.topShip || '—', color: C.RED },
+      ]),
+    ], [rightW * 0.6, rightW * 0.4], rightX, ry);
+  }
+
+  // ── Page 2+: Full Roster ─────────────────────────────────────────────────
+  doc.addPage();
+  y = MARGIN;
+  y = drawTitle(doc,
+    `◈  ${reportName.toUpperCase()}  ·  FULL PILOT ROSTER  ◈`,
+    `★ ELITE 8+  ◆ ACTIVE 4–7  ▷ PARTIAL 1–3  ○ GHOST 0`,
+    y,
+  );
+
+  drawTable(doc, [CSV_HDR, ...sorted.map((m, i) => csvRosterRow(m, i))], CSV_W, MARGIN, y);
+
+  doc.end();
+  return finish;
+}
+
 // ── Document factory ──────────────────────────────────────────────────────────
 
 function makePdf(outPath, title) {
@@ -420,4 +550,4 @@ async function buildAlliancePdf(corps, year, outPath) {
   return finish;
 }
 
-module.exports = { buildCorpPdf, buildAlliancePdf };
+module.exports = { buildCorpPdf, buildAlliancePdf, buildCsvPdf };
