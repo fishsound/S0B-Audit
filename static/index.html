@@ -268,6 +268,22 @@
       </div>
     </div>
 
+    <div class="card">
+      <div class="card-header">CSV FLEET IMPORT</div>
+      <div class="card-body">
+        <div>
+          <label>AFAT CSV Export File</label>
+          <input type="file" id="csv-file" accept=".csv"
+            style="padding:4px 0;background:transparent;border:none;color:var(--grey);font-size:11px;cursor:pointer;width:100%"/>
+        </div>
+        <div>
+          <label>Report Name</label>
+          <input type="text" id="csv-report-name" placeholder="e.g. May 2026 Fleet Activity" value="Fleet Activity"/>
+        </div>
+        <button class="btn-teal btn-full" onclick="runCsvImport()" id="btn-csv">📊 Build CSV Report</button>
+      </div>
+    </div>
+
     <div class="card" id="card-cache">
       <div class="card-header">OUTPUT</div>
       <div class="card-body">
@@ -488,6 +504,38 @@ async function runAlliance() {
   connectWs(job_id);
 }
 
+async function runCsvImport() {
+  if (_running) return;
+  const fileInput  = document.getElementById('csv-file');
+  const reportName = document.getElementById('csv-report-name').value.trim() || 'Fleet Activity';
+  if (!fileInput.files.length) {
+    logLine('[!] No CSV file selected — click "Choose File" above.', 'gold'); return;
+  }
+  const file = fileInput.files[0];
+  let text;
+  try {
+    text = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = e => resolve(e.target.result);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
+  } catch (e) { logLine(`[!] ${e.message}`, 'red'); return; }
+
+  showTab('log');
+  logDivider();
+  logLine(`[▶] CSV import: ${reportName}  (${file.name})`, 'teal');
+
+  const r = await apiFetch('/api/audit/csv', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ csv: text, reportName }),
+  });
+  if (!r) return;
+  if (!r.ok) { const e = await r.json(); logLine(`[!] ${e.detail}`, 'red'); return; }
+  const {job_id} = await r.json();
+  connectWs(job_id);
+}
+
 // ── WebSocket progress ────────────────────────────────────────────────────────
 function connectWs(jobId) {
   setRunning(true); hideDownload();
@@ -579,9 +627,9 @@ function filterReport() {
   const ratingF = document.getElementById('rpt-rating').value;
   const corpF   = document.getElementById('rpt-corp').value;
 
-  let members = _reportData.type === 'corp'
-    ? _reportData.members
-    : _reportData.corps.flatMap(c => c.members.map(m => ({ ...m, _corp: c.name })));
+  let members = _reportData.type === 'alliance'
+    ? _reportData.corps.flatMap(c => c.members.map(m => ({ ...m, _corp: c.name })))
+    : _reportData.members;
 
   if (corpF)   members = members.filter(m => m._corp === corpF);
   if (nameF)   members = members.filter(m => m.name.toLowerCase().includes(nameF));
@@ -594,9 +642,16 @@ function filterReport() {
 function applySort() {
   const { col, dir } = _sortState;
   _filteredRows = [..._filteredRows].sort((a, b) => {
-    // month keys (e.g. "2026-Jan") live in fatsByMonth, not on the row directly
-    const av = col in a ? (a[col] ?? '') : (a.fatsByMonth?.[col] ?? 0);
-    const bv = col in b ? (b[col] ?? '') : (b.fatsByMonth?.[col] ?? 0);
+    let av, bv;
+    if (col && col.startsWith('ft:')) {
+      const k = col.slice(3);
+      av = a.fleetTypes?.[k] ?? 0;
+      bv = b.fleetTypes?.[k] ?? 0;
+    } else {
+      // month keys (e.g. "2026-Jan") live in fatsByMonth, not on the row directly
+      av = col in a ? (a[col] ?? '') : (a.fatsByMonth?.[col] ?? 0);
+      bv = col in b ? (b[col] ?? '') : (b.fatsByMonth?.[col] ?? 0);
+    }
     if (typeof av === 'string') return dir * av.toLowerCase().localeCompare(bv.toLowerCase());
     return dir * (av - bv);
   });
@@ -614,26 +669,44 @@ function sortBy(col) {
 // ── Report: build headers ─────────────────────────────────────────────────────
 function buildTableHeaders() {
   if (!_reportData) return;
-  const year = _reportData.year;
-  const months = getMonths(year);
 
-  const cols = [
-    { label: '#',           key: null,            sort: false },
-    { label: 'PILOT NAME',  key: 'name',           sort: true  },
-    { label: 'ASSET BASE',  key: 'topAssetSystem', sort: true  },
-  ];
-  if (_reportData.type === 'alliance')
-    cols.push({ label: 'CORPORATION', key: '_corp', sort: true });
-
-  cols.push(
-    { label: 'CORP JOINED',  key: 'joinDate',      sort: true  },
-    { label: 'IN ALLIANCE',  key: 'timeInCorp',    sort: false },
-    { label: 'ALTS',         key: 'altCount',      sort: true  },
-    { label: 'LAST LOGIN',   key: 'lastLogin',     sort: true  },
-    { label: 'TOTAL FATs',   key: 'totalFats',     sort: true  },
-    ...months.map(mo => ({ label: mo.label, key: mo.key, sort: true })),
-    { label: 'RATING',       key: null,            sort: false },
-  );
+  let cols;
+  if (_reportData.type === 'csv') {
+    cols = [
+      { label: '#',          key: null,                      sort: false },
+      { label: 'PILOT',      key: 'name',                    sort: true  },
+      { label: 'TOTAL',      key: 'totalFats',               sort: true  },
+      { label: 'STRATEGIC',  key: 'ft:STRATEGIC',            sort: true  },
+      { label: 'SIG/SQUAD',  key: 'ft:SIG/SQUAD',           sort: true  },
+      { label: 'SIG STR',    key: 'ft:SIG/SQUAD Strategic',  sort: true  },
+      { label: 'PEACETIME',  key: 'ft:PEACETIME',            sort: true  },
+      { label: 'CORP',       key: 'ft:Corp',                 sort: true  },
+      { label: 'SCOUTS',     key: 'ft:SCOUTS',               sort: true  },
+      { label: 'INCURSION',  key: 'incursion',               sort: true  },
+      { label: 'BEEHIVE',    key: 'ft:Beehive',              sort: true  },
+      { label: 'TOP SHIP',   key: 'topShip',                 sort: true  },
+      { label: 'RATING',     key: null,                      sort: false },
+    ];
+  } else {
+    const year   = _reportData.year;
+    const months = getMonths(year);
+    cols = [
+      { label: '#',           key: null,             sort: false },
+      { label: 'PILOT NAME',  key: 'name',           sort: true  },
+      { label: 'ASSET BASE',  key: 'topAssetSystem', sort: true  },
+    ];
+    if (_reportData.type === 'alliance')
+      cols.push({ label: 'CORPORATION', key: '_corp', sort: true });
+    cols.push(
+      { label: 'CORP JOINED',  key: 'joinDate',   sort: true  },
+      { label: 'IN ALLIANCE',  key: 'timeInCorp', sort: false },
+      { label: 'ALTS',         key: 'altCount',   sort: true  },
+      { label: 'LAST LOGIN',   key: 'lastLogin',  sort: true  },
+      { label: 'TOTAL FATs',   key: 'totalFats',  sort: true  },
+      ...months.map(mo => ({ label: mo.label, key: mo.key, sort: true })),
+      { label: 'RATING',       key: null,         sort: false },
+    );
+  }
 
   const thead = document.getElementById('rt-head');
   thead.innerHTML = '';
@@ -655,54 +728,89 @@ function buildTableHeaders() {
 // ── Report: render body ───────────────────────────────────────────────────────
 function renderTableBody() {
   if (!_reportData) return;
-  const year   = _reportData.year;
-  const months = getMonths(year);
-  const tbody  = document.getElementById('rt-body');
+  const tbody = document.getElementById('rt-body');
   tbody.innerHTML = '';
 
-  _filteredRows.forEach((m, i) => {
-    const [tier, cls] = tierInfo(m.totalFats);
-    const tr = document.createElement('tr');
+  if (_reportData.type === 'csv') {
+    _filteredRows.forEach((m, i) => {
+      const [tier, cls] = tierInfo(m.totalFats);
+      const tr = document.createElement('tr');
+      const ft = m.fleetTypes || {};
+      const ftv = (key, color) => {
+        const n = ft[key] || 0;
+        return td(n || '—', 'center', n ? color : '#8B949E');
+      };
+      const incurs = (ft['Incursion-HQ'] || 0) + (ft['Incursion-VG'] || 0);
+      const cells = [
+        td(i + 1,           'center', '#8B949E'),
+        td(m.name,          'left',   '#FFFFFF', true),
+        td(m.totalFats,     'center', fatColor(m.totalFats), true),
+        ftv('STRATEGIC',            '#00E5CC'),
+        ftv('SIG/SQUAD',            '#00BFFF'),
+        ftv('SIG/SQUAD Strategic',  '#00BFFF'),
+        ftv('PEACETIME',            '#27AE60'),
+        ftv('Corp',                 '#27AE60'),
+        ftv('SCOUTS',               '#27AE60'),
+        td(incurs || '—',   'center', incurs ? '#FFD700' : '#8B949E'),
+        ftv('Beehive',              '#27AE60'),
+        td(m.topShip || '—', 'left', '#8B949E'),
+      ];
+      const ratingTd = document.createElement('td');
+      ratingTd.style.textAlign = 'center';
+      const badge = document.createElement('span');
+      badge.className = `rt-badge rt-${cls}`;
+      badge.textContent = tier;
+      ratingTd.appendChild(badge);
+      cells.forEach(c => tr.appendChild(c));
+      tr.appendChild(ratingTd);
+      tbody.appendChild(tr);
+    });
+  } else {
+    const year   = _reportData.year;
+    const months = getMonths(year);
 
-    const cells = [
-      td(i + 1,                              'center', '#8B949E'),
-      td(m.name,                             'left',   '#FFFFFF', true),
-      td(m.topAssetSystem || '—',            'left',   m.topAssetSystem ? '#27AE60' : '#8B949E'),
-    ];
-    if (_reportData.type === 'alliance')
-      cells.push(td(m._corp || '—', 'left', '#8B949E'));
+    _filteredRows.forEach((m, i) => {
+      const [tier, cls] = tierInfo(m.totalFats);
+      const tr = document.createElement('tr');
 
-    cells.push(
-      td(m.joinDate   || '—',              'center', '#8B949E'),
-      td(m.timeInCorp || m.born || '—',   'center', '#8B949E'),
-      td(m.altCount != null ? m.altCount : 0, 'center',
-         m.altCount > 0 ? '#00E5CC' : '#8B949E'),
-      td(m.lastLogin  || '—',              'center', '#8B949E'),
-      td(m.totalFats,                      'center', fatColor(m.totalFats), true),
-      ...months.map(mo => {
-        const n = m.fatsByMonth?.[mo.key] || 0;
-        return td(n || '—', 'center', n ? '#00E5CC' : '#8B949E');
-      }),
-    );
+      const cells = [
+        td(i + 1,                   'center', '#8B949E'),
+        td(m.name,                  'left',   '#FFFFFF', true),
+        td(m.topAssetSystem || '—', 'left',   m.topAssetSystem ? '#27AE60' : '#8B949E'),
+      ];
+      if (_reportData.type === 'alliance')
+        cells.push(td(m._corp || '—', 'left', '#8B949E'));
 
-    // Rating badge
-    const ratingTd = document.createElement('td');
-    ratingTd.style.textAlign = 'center';
-    const badge = document.createElement('span');
-    badge.className = `rt-badge rt-${cls}`;
-    badge.textContent = tier;
-    ratingTd.appendChild(badge);
+      cells.push(
+        td(m.joinDate   || '—',            'center', '#8B949E'),
+        td(m.timeInCorp || m.born || '—', 'center', '#8B949E'),
+        td(m.altCount != null ? m.altCount : 0, 'center',
+           m.altCount > 0 ? '#00E5CC' : '#8B949E'),
+        td(m.lastLogin  || '—',            'center', '#8B949E'),
+        td(m.totalFats,                    'center', fatColor(m.totalFats), true),
+        ...months.map(mo => {
+          const n = m.fatsByMonth?.[mo.key] || 0;
+          return td(n || '—', 'center', n ? '#00E5CC' : '#8B949E');
+        }),
+      );
 
-    cells.forEach(c => tr.appendChild(c));
-    tr.appendChild(ratingTd);
-    tbody.appendChild(tr);
-  });
+      const ratingTd = document.createElement('td');
+      ratingTd.style.textAlign = 'center';
+      const badge = document.createElement('span');
+      badge.className = `rt-badge rt-${cls}`;
+      badge.textContent = tier;
+      ratingTd.appendChild(badge);
+      cells.forEach(c => tr.appendChild(c));
+      tr.appendChild(ratingTd);
+      tbody.appendChild(tr);
+    });
+  }
 
   // Summary bar
   const n      = _filteredRows.length;
-  const total  = _reportData.type === 'corp'
-    ? _reportData.members.length
-    : _reportData.corps.reduce((s, c) => s + c.members.length, 0);
+  const total  = _reportData.type === 'alliance'
+    ? _reportData.corps.reduce((s, c) => s + c.members.length, 0)
+    : _reportData.members.length;
   const active = _filteredRows.filter(m => m.totalFats > 0).length;
   const elite  = _filteredRows.filter(m => m.totalFats >= 8).length;
   const ghost  = _filteredRows.filter(m => m.totalFats === 0).length;
@@ -766,7 +874,8 @@ function setRunning(state) {
   _running = state;
   document.getElementById('btn-corp').disabled     = state;
   document.getElementById('btn-alliance').disabled = state;
-  status(state ? '⏳ Audit running — see log for progress…' : 'Done.');
+  document.getElementById('btn-csv').disabled      = state;
+  status(state ? '⏳ Processing — see log for progress…' : 'Done.');
 }
 function status(msg) { document.getElementById('statusbar').textContent = msg; }
 function setBadge(id, text, cls) {
