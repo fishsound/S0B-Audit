@@ -88,9 +88,8 @@ function applyCsvFats(members, csvFats, year, log) {
   for (const ch of members) {
     const csvCount = csvFats[ch.name];
     if (csvCount === undefined) continue;
-    const old = ch.fatsByMonth[monthKey] || 0;
-    ch.fatsByMonth[monthKey] = csvCount;
-    const diff = csvCount - old;
+    ch.fatsByMonth[monthKey] = (ch.fatsByMonth[monthKey] || 0) + csvCount;
+    const diff = csvCount;
     ch.fatsByYear[year] = (ch.fatsByYear[year] || 0) + diff;
     ch.totalFats = Object.values(ch.fatsByYear).reduce((a, b) => a + b, 0);
     ch.csvFat = csvCount;
