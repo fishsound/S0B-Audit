@@ -319,10 +319,6 @@ class AllianceAuthProvider extends BaseProvider {
   async enrich(chars, corpId, corpName, year, log) {
     const today = new Date();
 
-    log(`      building alt counts…`, 'grey');
-    const altMap = await this._buildAltCountMap();
-    for (const ch of chars) ch.altCount = altMap.get(ch.name) || 0;
-
     log(`      fetching overviews (${chars.length} chars)…`, 'grey');
     await Promise.all(chars.map(ch => this._limit(async () => {
       try {
@@ -337,6 +333,13 @@ class AllianceAuthProvider extends BaseProvider {
         log(`      ! overview ${ch.name}: ${e.message}`, 'red');
       }
     })));
+
+    // Alt counts must be applied AFTER overviews — Object.assign above copies a
+    // freshly-initialised makeCharacter() (altCount:0) onto each ch, so any
+    // altCount set before that loop would be silently reset to zero.
+    log(`      building alt counts…`, 'grey');
+    const altMap = await this._buildAltCountMap();
+    for (const ch of chars) ch.altCount = altMap.get(ch.name) || 0;
 
     log(`      fetching asset locations (${chars.length} chars)…`, 'grey');
     await Promise.all(chars.map(ch => this._limit(async () => {

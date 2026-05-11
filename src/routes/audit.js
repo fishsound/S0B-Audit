@@ -5,7 +5,7 @@ const fs     = require('fs');
 const path   = require('path');
 
 const { collectCorp, collectAlliance } = require('../audit');
-const { REPORTS_DIR, ENV_FILE }        = require('../config');
+const { REPORTS_DIR, ENV_FILE, MONTH_ABBRS } = require('../config');
 const { AllianceAuthProvider, ESIProvider, EXTRA_PROVIDERS } = require('../providers');
 const { buildCorpPdf, buildAlliancePdf, buildCsvPdf } = require('../report/pdf');
 const { loadCredentials } = require('../utils');
@@ -77,6 +77,28 @@ function csvRowToMember(row) {
   return { name, totalFats, fleetTypes, incursion, topShip };
 }
 
+// Overlay CSV FAT totals onto the current month for any matching pilot.
+// Only applied when the audit year matches the current calendar year.
+function applyCsvFats(members, csvFats, year, log) {
+  if (!csvFats || !Object.keys(csvFats).length) return;
+  const today = new Date();
+  if (year !== today.getFullYear()) return;
+  const monthKey = `${year}-${MONTH_ABBRS[today.getMonth()]}`;
+  let applied = 0;
+  for (const ch of members) {
+    const csvCount = csvFats[ch.name];
+    if (csvCount === undefined) continue;
+    const old = ch.fatsByMonth[monthKey] || 0;
+    ch.fatsByMonth[monthKey] = csvCount;
+    const diff = csvCount - old;
+    ch.fatsByYear[year] = (ch.fatsByYear[year] || 0) + diff;
+    ch.totalFats = Object.values(ch.fatsByYear).reduce((a, b) => a + b, 0);
+    ch.csvFat = csvCount;
+    applied++;
+  }
+  if (applied) log(`      applied CSV FAT data for ${applied} pilots (${monthKey})`, 'teal');
+}
+
 module.exports = (app) => {
 
   // ── REST: list corps ────────────────────────────────────────────────────────
@@ -94,7 +116,7 @@ module.exports = (app) => {
 
   // ── REST: start corp audit ──────────────────────────────────────────────────
   app.post('/api/audit/corp', requireMember, async (req, res) => {
-    const { corp_id, corp_name, year = new Date().getFullYear() } = req.body;
+    const { corp_id, corp_name, year = new Date().getFullYear(), csvFats } = req.body;
     if (!corp_id || !corp_name)
       return res.status(400).json({ detail: 'corp_id and corp_name are required.' });
 
@@ -122,6 +144,7 @@ module.exports = (app) => {
       const log = (msg, tag = 'white') => job.messages.push({ msg, tag });
       try {
         const corp  = await collectCorp(auth, esi, EXTRA_PROVIDERS, corp_id, corp_name, year, log);
+        applyCsvFats(corp.members, csvFats, year, log);
         const fname = `sob_corp_${safeFilename(corp_name)}_${today()}.pdf`;
         await Promise.all([
           buildCorpPdf(corp_name, corp.members, year, path.join(REPORTS_DIR, fname)),
@@ -142,7 +165,7 @@ module.exports = (app) => {
 
   // ── REST: start alliance audit ──────────────────────────────────────────────
   app.post('/api/audit/alliance', requireAdmin, async (req, res) => {
-    const { year = new Date().getFullYear() } = req.body;
+    const { year = new Date().getFullYear(), csvFats } = req.body;
 
     let auth, esi;
     try {
@@ -162,6 +185,7 @@ module.exports = (app) => {
       const log = (msg, tag = 'white') => job.messages.push({ msg, tag });
       try {
         const corps = await collectAlliance(auth, esi, EXTRA_PROVIDERS, year, log);
+        for (const corp of corps) applyCsvFats(corp.members, csvFats, year, log);
         const fname = `sob_alliance_${today()}.pdf`;
         const total = corps.reduce((s, c) => s + c.members.length, 0);
         await Promise.all([

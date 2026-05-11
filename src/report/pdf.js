@@ -152,33 +152,37 @@ function drawTitle(doc, title, subtitle, y) {
 
 // ── Column definitions ────────────────────────────────────────────────────────
 
-function rosterCols(year) {
+function rosterCols(year, hasCsv = false) {
   // Landscape A4 usable width ≈ 802pt
   const usable  = 841.89 - 2 * MARGIN;
   const months  = yearMonths(year);
-  // Fixed columns: #, name, asset base, joined, alliance, login, alts, total, rating
-  const fixed   = [14, 90, 68, 50, 62, 50, 26, 29, 40];
+  // Fixed columns: #, name, asset base, joined, alliance, login, alts, total, [csv,] rating
+  const fixed   = hasCsv
+    ? [14, 90, 68, 50, 62, 50, 26, 29, 28, 40]
+    : [14, 90, 68, 50, 62, 50, 26, 29,     40];
   const fixedW  = fixed.reduce((a, b) => a + b, 0);
   const moW     = Math.floor((usable - fixedW) / months.length);
   return { fixed, moW, months, usable };
 }
 
-function rosterHeader(year) {
-  const { months } = rosterCols(year);
+function rosterHeader(year, hasCsv = false) {
+  const { months } = rosterCols(year, hasCsv);
   return [
     '#', 'PILOT NAME', 'ASSET BASE', 'CORP JOINED', 'IN ALLIANCE',
     'LAST LOGIN', 'ALTS', 'FATs',
+    ...(hasCsv ? ['CSV'] : []),
     ...months.map(m => `${m} '${String(year).slice(2)}`),
     'RATING',
   ];
 }
 
-function rosterColWidths(year) {
-  const { fixed, moW, months } = rosterCols(year);
+function rosterColWidths(year, hasCsv = false) {
+  const { fixed, moW, months } = rosterCols(year, hasCsv);
+  // Insert CSV width (fixed[-2] = 28) between FATs and month cols when present
   return [...fixed.slice(0, -1), ...months.map(() => moW), fixed[fixed.length - 1]];
 }
 
-function rosterRow(ch, idx, year) {
+function rosterRow(ch, idx, year, hasCsv = false) {
   const [tier, tc] = tierInfo(ch.totalFats);
   const months = yearMonths(year);
 
@@ -191,6 +195,12 @@ function rosterRow(ch, idx, year) {
     { text: ch.lastLogin || '—', color: C.GREY,       align: 'center' },
     { text: ch.altCount || 0,   color: ch.altCount > 0 ? C.TEAL : C.GREY, align: 'center' },
     { text: ch.totalFats, color: fatColor(ch.totalFats), bold: true, align: 'center' },
+    ...(hasCsv ? [{
+      text: ch.csvFat != null ? ch.csvFat : '—',
+      color: ch.csvFat > 0 ? C.GOLD : C.GREY,
+      bold: ch.csvFat > 0,
+      align: 'center',
+    }] : []),
     ...months.map(mo => {
       const n = ch.fatsByMonth[`${year}-${mo}`] || 0;
       return { text: n || '—', color: n ? C.TEAL : C.GREY, align: 'center' };
@@ -457,10 +467,11 @@ async function buildCorpPdf(corpName, members, year, outPath) {
     y,
   );
 
-  const colW = rosterColWidths(year);
+  const hasCsv = sorted.some(m => m.csvFat != null);
+  const colW = rosterColWidths(year, hasCsv);
   const rows = [
-    rosterHeader(year),
-    ...sorted.map((m, i) => rosterRow(m, i, year)),
+    rosterHeader(year, hasCsv),
+    ...sorted.map((m, i) => rosterRow(m, i, year, hasCsv)),
   ];
   y = drawTable(doc, rows, colW, MARGIN, y);
 
@@ -532,6 +543,7 @@ async function buildAlliancePdf(corps, year, outPath) {
   drawTable(doc, allianceRows, aW, MARGIN, y);
 
   // ── Per-corp roster pages ─────────────────────────────────────────────────
+  const hasCsv = corps.some(c => c.members.some(m => m.csvFat != null));
   for (const corp of sorted) {
     if (!corp.members.length) continue;
     const ms = [...corp.members].sort((a, b) => b.totalFats - a.totalFats);
@@ -542,8 +554,8 @@ async function buildAlliancePdf(corps, year, outPath) {
       `${ms.length} Mains  ·  Total FATs: ${ms.reduce((s, m) => s + m.totalFats, 0)}  ·  ${year} YTD: ${ms.reduce((s, m) => s + (m.fatsByYear[year] || 0), 0)}`,
       y,
     );
-    const rows = [rosterHeader(year), ...ms.map((m, i) => rosterRow(m, i, year))];
-    drawTable(doc, rows, rosterColWidths(year), MARGIN, y);
+    const rows = [rosterHeader(year, hasCsv), ...ms.map((m, i) => rosterRow(m, i, year, hasCsv))];
+    drawTable(doc, rows, rosterColWidths(year, hasCsv), MARGIN, y);
   }
 
   doc.end();
