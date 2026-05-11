@@ -733,12 +733,14 @@ function buildTableHeaders() {
     ];
     if (_reportData.type === 'alliance')
       cols.push({ label: 'CORPORATION', key: '_corp', sort: true });
+    const hasCsv = getHasCsv();
     cols.push(
       { label: 'CORP JOINED',  key: 'joinDate',   sort: true  },
       { label: 'IN ALLIANCE',  key: 'timeInCorp', sort: false },
       { label: 'ALTS',         key: 'altCount',   sort: true  },
       { label: 'LAST LOGIN',   key: 'lastLogin',  sort: true  },
       { label: 'TOTAL FATs',   key: 'totalFats',  sort: true  },
+      ...(hasCsv ? [{ label: 'CSV', key: 'csvFat', sort: true }] : []),
       ...months.map(mo => ({ label: mo.label, key: mo.key, sort: true })),
       { label: 'RATING',       key: null,         sort: false },
     );
@@ -824,6 +826,12 @@ function renderTableBody() {
            m.altCount > 0 ? '#00E5CC' : '#8B949E'),
         td(m.lastLogin  || '—',            'center', '#8B949E'),
         td(m.totalFats,                    'center', fatColor(m.totalFats), true),
+        ...(getHasCsv() ? [td(
+          m.csvFat != null ? m.csvFat : '—',
+          'center',
+          m.csvFat > 0 ? '#FFD700' : '#8B949E',
+          m.csvFat > 0,
+        )] : []),
         ...months.map(mo => {
           const n = m.fatsByMonth?.[mo.key] || 0;
           return td(n || '—', 'center', n ? '#00E5CC' : '#8B949E');
@@ -863,6 +871,14 @@ function td(text, align, color, bold = false) {
   el.style.color     = color;
   if (bold) el.style.fontWeight = 'bold';
   return el;
+}
+
+function getHasCsv() {
+  if (!_reportData) return false;
+  const members = _reportData.type === 'alliance'
+    ? _reportData.corps.flatMap(c => c.members)
+    : (_reportData.members || []);
+  return members.some(m => m.csvFat != null);
 }
 
 function getMonths(year) {

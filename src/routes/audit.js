@@ -93,6 +93,7 @@ function applyCsvFats(members, csvFats, year, log) {
     const diff = csvCount - old;
     ch.fatsByYear[year] = (ch.fatsByYear[year] || 0) + diff;
     ch.totalFats = Object.values(ch.fatsByYear).reduce((a, b) => a + b, 0);
+    ch.csvFat = csvCount;
     applied++;
   }
   if (applied) log(`      applied CSV FAT data for ${applied} pilots (${monthKey})`, 'teal');
