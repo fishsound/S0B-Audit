@@ -305,10 +305,11 @@ class AllianceAuthProvider extends BaseProvider {
     const map = new Map();
     for (const r of all) {
       if (r.length < 13 || r[10] === 'yes') continue;
-      // column 2 (main_character) has the same HTML format as column 0 —
-      // an anchor pointing to /member-audit/character_viewer/<pk>/ with the
-      // character name as link text.  Reuse _parseNameCell for reliable extraction.
-      const [, mainName] = this._parseNameCell(r[2] || '');
+      // column 2 is usually an anchor to /member-audit/character_viewer/<pk>/;
+      // some Alliance Auth builds render it as plain text.  Try anchor first,
+      // fall back to stripping HTML so plain-text main names are not missed.
+      const [, anchorName] = this._parseNameCell(r[2] || '');
+      const mainName = anchorName || stripHtml(r[2] || '');
       if (mainName) map.set(mainName, (map.get(mainName) || 0) + 1);
     }
     return map;
