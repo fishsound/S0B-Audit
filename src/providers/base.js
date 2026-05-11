@@ -17,6 +17,10 @@ class BaseProvider {
   async listAllianceCorps(year, month) { return []; }
   async listCorpMembers(corpName) { return []; }
 
+  // Each item: { header, widthPt, align, providerName, dataKey, colorTheme }
+  // colorTheme: 'fats' | 'teal' | 'gold' | 'green' | 'grey'
+  get extraColumns() { return []; }
+
   /**
    * Enrich characters in-place. Called once per corp audit.
    * @param {object[]} chars

@@ -19,6 +19,9 @@ venv/
 dist/
 build/
 
+# Claude Code internal state
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db
