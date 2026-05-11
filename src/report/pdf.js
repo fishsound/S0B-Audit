@@ -156,9 +156,9 @@ function rosterCols(year, hasCsv = false) {
   // Landscape A4 usable width ≈ 802pt
   const usable  = 841.89 - 2 * MARGIN;
   const months  = yearMonths(year);
-  // Fixed columns: #, name, asset base, joined, alliance, login, alts, total, [csv,] rating
+  // Fixed columns: #, name, asset base, joined, alliance, login, alts, total, rating[, li-paps]
   const fixed   = hasCsv
-    ? [14, 90, 68, 50, 62, 50, 26, 29, 28, 40]
+    ? [14, 90, 68, 50, 62, 50, 26, 29, 40, 40]
     : [14, 90, 68, 50, 62, 50, 26, 29,     40];
   const fixedW  = fixed.reduce((a, b) => a + b, 0);
   const moW     = Math.floor((usable - fixedW) / months.length);
@@ -170,15 +170,18 @@ function rosterHeader(year, hasCsv = false) {
   return [
     '#', 'PILOT NAME', 'ASSET BASE', 'CORP JOINED', 'IN ALLIANCE',
     'LAST LOGIN', 'ALTS', 'FATs',
-    ...(hasCsv ? ['CSV'] : []),
     ...months.map(m => `${m} '${String(year).slice(2)}`),
     'RATING',
+    ...(hasCsv ? ['LI PAPs'] : []),
   ];
 }
 
 function rosterColWidths(year, hasCsv = false) {
   const { fixed, moW, months } = rosterCols(year, hasCsv);
-  // Insert CSV width (fixed[-2] = 28) between FATs and month cols when present
+  if (hasCsv) {
+    // layout: [...pre-rating fixed] [months] [RATING] [LI PAPs]
+    return [...fixed.slice(0, -2), ...months.map(() => moW), fixed[fixed.length - 2], fixed[fixed.length - 1]];
+  }
   return [...fixed.slice(0, -1), ...months.map(() => moW), fixed[fixed.length - 1]];
 }
 
@@ -195,17 +198,17 @@ function rosterRow(ch, idx, year, hasCsv = false) {
     { text: ch.lastLogin || '—', color: C.GREY,       align: 'center' },
     { text: ch.altCount || 0,   color: ch.altCount > 0 ? C.TEAL : C.GREY, align: 'center' },
     { text: ch.totalFats, color: fatColor(ch.totalFats), bold: true, align: 'center' },
+    ...months.map(mo => {
+      const n = ch.fatsByMonth[`${year}-${mo}`] || 0;
+      return { text: n || '—', color: n ? C.TEAL : C.GREY, align: 'center' };
+    }),
+    { text: tier, color: tc, bold: true, align: 'center' },
     ...(hasCsv ? [{
       text: ch.csvFat != null ? ch.csvFat : '—',
       color: ch.csvFat > 0 ? C.GOLD : C.GREY,
       bold: ch.csvFat > 0,
       align: 'center',
     }] : []),
-    ...months.map(mo => {
-      const n = ch.fatsByMonth[`${year}-${mo}`] || 0;
-      return { text: n || '—', color: n ? C.TEAL : C.GREY, align: 'center' };
-    }),
-    { text: tier, color: tc, bold: true, align: 'center' },
   ];
 }
 

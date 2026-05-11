@@ -740,9 +740,9 @@ function buildTableHeaders() {
       { label: 'ALTS',         key: 'altCount',   sort: true  },
       { label: 'LAST LOGIN',   key: 'lastLogin',  sort: true  },
       { label: 'TOTAL FATs',   key: 'totalFats',  sort: true  },
-      ...(hasCsv ? [{ label: 'CSV', key: 'csvFat', sort: true }] : []),
       ...months.map(mo => ({ label: mo.label, key: mo.key, sort: true })),
       { label: 'RATING',       key: null,         sort: false },
+      ...(hasCsv ? [{ label: 'Loaded Imperium PAPs', key: 'csvFat', sort: true }] : []),
     );
   }
 
@@ -826,12 +826,6 @@ function renderTableBody() {
            m.altCount > 0 ? '#00E5CC' : '#8B949E'),
         td(m.lastLogin  || '—',            'center', '#8B949E'),
         td(m.totalFats,                    'center', fatColor(m.totalFats), true),
-        ...(getHasCsv() ? [td(
-          m.csvFat != null ? m.csvFat : '—',
-          'center',
-          m.csvFat > 0 ? '#FFD700' : '#8B949E',
-          m.csvFat > 0,
-        )] : []),
         ...months.map(mo => {
           const n = m.fatsByMonth?.[mo.key] || 0;
           return td(n || '—', 'center', n ? '#00E5CC' : '#8B949E');
@@ -846,6 +840,10 @@ function renderTableBody() {
       ratingTd.appendChild(badge);
       cells.forEach(c => tr.appendChild(c));
       tr.appendChild(ratingTd);
+      if (getHasCsv()) tr.appendChild(td(
+        m.csvFat != null ? m.csvFat : '—', 'center',
+        m.csvFat > 0 ? '#FFD700' : '#8B949E', m.csvFat > 0,
+      ));
       tbody.appendChild(tr);
     });
   }
