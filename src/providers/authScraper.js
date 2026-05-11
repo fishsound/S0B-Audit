@@ -38,7 +38,8 @@ class AllianceAuthProvider extends BaseProvider {
 
   constructor(sessionId, csrfToken) {
     super();
-    this._limit  = limiter(AUTH_CONCURRENCY);
+    this._limit       = limiter(AUTH_CONCURRENCY);
+    this._altMapCache = null;
     this._client = axios.create({
       baseURL: BASE_URL,
       timeout: 20000,
@@ -301,6 +302,7 @@ class AllianceAuthProvider extends BaseProvider {
   // ── Alt counting ──────────────────────────────────────────────────────────
 
   async _buildAltCountMap() {
+    if (this._altMapCache) return this._altMapCache;
     const all = await this._finderRaw('');
     const map = new Map();
     for (const r of all) {
@@ -312,6 +314,7 @@ class AllianceAuthProvider extends BaseProvider {
       const mainName = anchorName || stripHtml(r[2] || '');
       if (mainName) map.set(mainName, (map.get(mainName) || 0) + 1);
     }
+    this._altMapCache = map;
     return map;
   }
 

@@ -50,14 +50,38 @@ const CSV_SHIP_TYPES = [
   'Supercarrier', 'Tactical Destroyer', 'Titan',
 ];
 
+function parseCsvLine(line) {
+  const fields = [];
+  let i = 0;
+  while (i < line.length) {
+    if (line[i] === '"') {
+      let field = '';
+      i++;
+      while (i < line.length) {
+        if (line[i] === '"' && line[i + 1] === '"') { field += '"'; i += 2; }
+        else if (line[i] === '"') { i++; break; }
+        else { field += line[i++]; }
+      }
+      fields.push(field);
+      if (line[i] === ',') i++;
+    } else {
+      const end = line.indexOf(',', i);
+      if (end === -1) { fields.push(line.slice(i).trim()); break; }
+      fields.push(line.slice(i, end).trim());
+      i = end + 1;
+    }
+  }
+  return fields;
+}
+
 function parseCsvText(text) {
   const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
   if (lines.length < 2) return [];
-  const headers = lines[0].split(',').map(h => h.trim());
+  const headers = parseCsvLine(lines[0]).map(h => h.trim());
   return lines.slice(1).map(line => {
-    const vals = line.split(',').map(v => v.trim());
+    const vals = parseCsvLine(line);
     const row  = {};
-    headers.forEach((h, i) => { row[h] = vals[i] || ''; });
+    headers.forEach((h, i) => { row[h] = (vals[i] || '').trim(); });
     return row;
   });
 }
@@ -99,6 +123,18 @@ function applyCsvFats(members, csvFats, year, log) {
 }
 
 module.exports = (app) => {
+
+  // ── REST: extra provider column metadata ───────────────────────────────────
+  app.get('/api/providers/columns', requireMember, (req, res) => {
+    res.json(EXTRA_PROVIDERS.flatMap(p => (p.extraColumns || []).map(c => ({
+      header:       c.header,
+      widthPt:      c.widthPt || 40,
+      align:        c.align   || 'center',
+      providerName: c.providerName,
+      dataKey:      c.dataKey,
+      colorTheme:   c.colorTheme || 'grey',
+    }))));
+  });
 
   // ── REST: list corps ────────────────────────────────────────────────────────
   app.get('/api/corps', requireMember, async (req, res) => {
@@ -145,8 +181,9 @@ module.exports = (app) => {
         const corp  = await collectCorp(auth, esi, EXTRA_PROVIDERS, corp_id, corp_name, year, log);
         applyCsvFats(corp.members, csvFats, year, log);
         const fname = `sob_corp_${safeFilename(corp_name)}_${today()}.pdf`;
+        const extraCols = EXTRA_PROVIDERS.flatMap(p => p.extraColumns || []);
         await Promise.all([
-          buildCorpPdf(corp_name, corp.members, year, path.join(REPORTS_DIR, fname)),
+          buildCorpPdf(corp_name, corp.members, year, path.join(REPORTS_DIR, fname), extraCols),
           fs.promises.writeFile(
             path.join(REPORTS_DIR, fname.replace('.pdf', '.json')),
             JSON.stringify({ type: 'corp', corpName: corp_name, year, generatedAt: new Date().toISOString(), members: corp.members }),
@@ -187,8 +224,9 @@ module.exports = (app) => {
         for (const corp of corps) applyCsvFats(corp.members, csvFats, year, log);
         const fname = `sob_alliance_${today()}.pdf`;
         const total = corps.reduce((s, c) => s + c.members.length, 0);
+        const extraCols = EXTRA_PROVIDERS.flatMap(p => p.extraColumns || []);
         await Promise.all([
-          buildAlliancePdf(corps, year, path.join(REPORTS_DIR, fname)),
+          buildAlliancePdf(corps, year, path.join(REPORTS_DIR, fname), extraCols),
           fs.promises.writeFile(
             path.join(REPORTS_DIR, fname.replace('.pdf', '.json')),
             JSON.stringify({ type: 'alliance', year, generatedAt: new Date().toISOString(), corps: corps.map(c => ({ corpId: c.corpId, name: c.name, members: c.members })) }),

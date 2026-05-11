@@ -1,359 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>◈ SONS of BANE · Alliance Audit Tool ◈</title>
-<style>
-  :root {
-    --bg:      #0D1117;
-    --bg-mid:  #161B22;
-    --bg-light:#1F2937;
-    --cyan:    #00BFFF;
-    --teal:    #00E5CC;
-    --gold:    #FFD700;
-    --red:     #C0392B;
-    --green:   #27AE60;
-    --grey:    #8B949E;
-    --white:   #FFFFFF;
-    --header:  #0A3D62;
-    --border:  #2D3748;
+// ── State ─────────────────────────────────────────────────────────────────────
+let _corps       = [];
+let _running     = false;
+let _reportFile  = null;
+let _ws          = null;
+let _user        = null;
+let _reportData  = null;
+let _filteredRows = [];
+let _sortState   = { col: 'totalFats', dir: -1 };
+let _page = 0; const PAGE_SIZE = 100;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function apiFetch(url, opts) {
+  const r = await fetch(url, opts);
+  if (r.status === 401) {
+    logLine('[!] Session expired — redirecting to login…', 'gold');
+    setTimeout(() => { window.location.href = '/auth/login'; }, 1500);
+    return null;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--white);
-    font-family: 'Calibri', 'Segoe UI', sans-serif;
-    font-size: 13px;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ── Login screen ── */
-  #login-screen {
-    position: fixed; inset: 0;
-    background: var(--bg);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 100;
-  }
-  .login-box {
-    background: var(--bg-mid);
-    border: 1px solid var(--header);
-    border-radius: 6px;
-    padding: 48px 56px;
-    text-align: center;
-    max-width: 420px; width: 90%;
-  }
-  .login-box h1 { color: var(--cyan); font-size: 20px; letter-spacing: 1px; margin-bottom: 8px; }
-  .login-box h2 { color: var(--gold); font-size: 13px; font-weight: normal; letter-spacing: 0.5px; margin-bottom: 28px; }
-  .login-box p  { color: var(--grey); font-size: 11px; line-height: 1.6; margin-bottom: 6px; }
-  .btn-eve {
-    display: inline-block; margin-top: 24px; padding: 11px 28px;
-    background: transparent; border: 2px solid var(--cyan); border-radius: 4px;
-    color: var(--cyan); font-family: inherit; font-weight: bold; font-size: 13px;
-    letter-spacing: 0.5px; text-decoration: none;
-    transition: background 0.15s, color 0.15s; cursor: pointer;
-  }
-  .btn-eve:hover { background: var(--cyan); color: var(--bg); }
-
-  /* ── Banner ── */
-  .banner {
-    background: var(--bg);
-    border-bottom: 2px solid var(--header);
-    padding: 10px 20px;
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  }
-  .banner-title { text-align: center; flex: 1; }
-  .banner-title h1 { color: var(--cyan); font-size: 20px; letter-spacing: 1px; }
-  .banner-title p  { color: var(--grey); font-size: 11px; margin-top: 2px; }
-  .user-bar { display: flex; align-items: center; gap: 8px; font-size: 11px; white-space: nowrap; min-width: 180px; justify-content: flex-end; }
-  .role-badge { font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.5px; text-transform: uppercase; }
-  .role-member  { background: var(--header); color: var(--cyan);  border: 1px solid var(--cyan); }
-  .role-officer { background: #014d40;       color: var(--teal);  border: 1px solid var(--teal); }
-  .role-admin   { background: #3d2f00;       color: var(--gold);  border: 1px solid var(--gold); }
-  .logout-link  { color: var(--grey); text-decoration: none; font-size: 10px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 3px; transition: color 0.1s, border-color 0.1s; }
-  .logout-link:hover { color: var(--red); border-color: var(--red); }
-
-  /* ── Layout ── */
-  .layout { display: flex; flex: 1; overflow: hidden; }
-  .sidebar {
-    width: 340px; min-width: 280px;
-    background: var(--bg); border-right: 1px solid var(--border);
-    overflow-y: auto; padding: 12px;
-    display: flex; flex-direction: column; gap: 10px;
-  }
-  .main-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-
-  /* ── Cards ── */
-  .card { background: var(--bg-mid); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
-  .card-header { background: var(--header); color: var(--cyan); font-size: 10px; font-weight: bold; letter-spacing: 0.5px; padding: 6px 10px; }
-  .card-body { padding: 10px; display: flex; flex-direction: column; gap: 7px; }
-
-  /* ── Form ── */
-  label { color: var(--grey); font-size: 10px; display: block; margin-bottom: 2px; }
-  input[type="text"], input[type="password"], select {
-    width: 100%; background: var(--bg-light); border: 1px solid var(--border); border-radius: 3px;
-    color: var(--white); font-size: 12px; padding: 5px 8px; outline: none; transition: border-color 0.15s;
-  }
-  input:focus, select:focus { border-color: var(--cyan); }
-  input:disabled, select:disabled { opacity: 0.45; cursor: not-allowed; }
-  select option { background: var(--bg-light); }
-  .row { display: flex; gap: 6px; align-items: center; }
-  .row input, .row select { flex: 1; }
-
-  /* ── Buttons ── */
-  button { border: none; border-radius: 3px; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 12px; padding: 6px 14px; transition: filter 0.15s, opacity 0.15s; }
-  button:hover:not(:disabled) { filter: brightness(1.15); }
-  button:disabled { opacity: 0.45; cursor: not-allowed; }
-  .btn-cyan  { background: var(--cyan);     color: var(--bg);    }
-  .btn-teal  { background: var(--teal);     color: var(--bg);    }
-  .btn-gold  { background: var(--gold);     color: var(--bg);    }
-  .btn-red   { background: var(--red);      color: var(--white); }
-  .btn-dim   { background: var(--bg-light); color: var(--grey);  border: 1px solid var(--border); }
-  .btn-full  { width: 100%; }
-  .btn-icon  { padding: 5px 9px; font-size: 14px; line-height: 1; }
-  .status-badge { font-size: 10px; color: var(--grey); padding: 2px 0; }
-  .status-badge.ok  { color: var(--green); }
-  .status-badge.err { color: var(--red);   }
-
-  /* ── Panel tabs ── */
-  .panel-tabs {
-    background: var(--header);
-    display: flex; align-items: stretch;
-    flex-shrink: 0;
-  }
-  .tab-btn {
-    background: transparent; border: none; border-bottom: 2px solid transparent;
-    color: var(--grey); font-size: 10px; font-weight: bold; letter-spacing: 0.5px;
-    padding: 6px 14px; cursor: pointer; transition: color 0.1s;
-    font-family: inherit;
-  }
-  .tab-btn:hover { color: var(--white); filter: none; }
-  .tab-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); }
-  .tab-spacer { flex: 1; }
-  .tab-clear { margin: 3px 6px; font-size: 10px; padding: 3px 8px; }
-  .tab-view { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
-
-  /* ── Log ── */
-  #log {
-    flex: 1; background: var(--bg); color: var(--white);
-    font-family: 'Consolas', 'Courier New', monospace; font-size: 11px; line-height: 1.55;
-    padding: 10px 14px; overflow-y: auto; white-space: pre-wrap; word-break: break-word;
-  }
-  #log .t-cyan  { color: var(--cyan);  }
-  #log .t-teal  { color: var(--teal);  }
-  #log .t-gold  { color: var(--gold);  }
-  #log .t-red   { color: var(--red);   }
-  #log .t-green { color: var(--green); }
-  #log .t-grey  { color: var(--grey);  }
-  #log .t-white { color: var(--white); }
-
-  /* ── Report view ── */
-  .report-toolbar {
-    background: var(--bg-mid); border-bottom: 1px solid var(--border);
-    padding: 6px 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    flex-shrink: 0;
-  }
-  .report-toolbar input, .report-toolbar select {
-    width: auto; max-width: 180px; font-size: 11px; padding: 3px 7px;
-  }
-  #rpt-summary { color: var(--grey); font-size: 10px; }
-  .report-scroll { flex: 1; overflow: auto; }
-
-  #report-table { border-collapse: collapse; width: 100%; font-size: 11px; }
-  #report-table th {
-    background: var(--header); color: var(--cyan); font-size: 9px; font-weight: bold;
-    letter-spacing: 0.5px; padding: 5px 6px; white-space: nowrap;
-    position: sticky; top: 0; z-index: 1; user-select: none;
-    border-right: 1px solid var(--border);
-  }
-  #report-table th.sortable { cursor: pointer; }
-  #report-table th.sortable:hover { color: var(--white); }
-  #report-table th .sa { margin-left: 3px; opacity: 0.4; font-size: 8px; }
-  #report-table th.s-asc .sa::after  { content: '▲'; opacity: 1; }
-  #report-table th.s-desc .sa::after { content: '▼'; opacity: 1; }
-  #report-table th:not(.s-asc):not(.s-desc) .sa::after { content: '⇅'; }
-  #report-table td {
-    padding: 3px 6px; white-space: nowrap;
-    border-bottom: 1px solid #1a2030; border-right: 1px solid #1a2030;
-  }
-  #report-table tr:nth-child(even) td { background: var(--bg-mid);   }
-  #report-table tr:nth-child(odd)  td { background: var(--bg-light); }
-  #report-table tr:hover td { filter: brightness(1.2); }
-
-  .rt-badge { font-size: 9px; font-weight: bold; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
-  .rt-elite   { color: var(--teal);  border: 1px solid var(--teal);  }
-  .rt-active  { color: var(--green); border: 1px solid var(--green); }
-  .rt-partial { color: var(--gold);  border: 1px solid var(--gold);  }
-  .rt-ghost   { color: var(--red);   border: 1px solid var(--red);   }
-
-  /* ── Download bar ── */
-  #download-bar {
-    display: none; background: var(--header); border-top: 2px solid var(--teal);
-    padding: 8px 14px; align-items: center; gap: 12px; flex-shrink: 0;
-  }
-  #download-bar.visible { display: flex; }
-  #download-bar span { color: var(--teal); font-weight: bold; flex: 1; font-size: 12px; }
-
-  /* ── Status bar ── */
-  .statusbar { background: var(--header); border-top: 1px solid var(--border); color: var(--grey); font-size: 10px; padding: 3px 12px; flex-shrink: 0; }
-
-  /* ── Spinner ── */
-  .spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--grey); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 5px; vertical-align: middle; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-</style>
-</head>
-<body>
-
-<div id="login-screen">
-  <div class="login-box">
-    <h1>◈  SONS of BANE  ◈</h1>
-    <h2>ALLIANCE AUDIT TOOL</h2>
-    <p>Sign in with your EVE Online character.</p>
-    <p>Access is restricted to SONS of BANE alliance members.</p>
-    <a href="/auth/login" class="btn-eve">Sign in with EVE Online</a>
-  </div>
-</div>
-
-<div class="banner">
-  <div style="min-width:180px"></div>
-  <div class="banner-title">
-    <h1>◈  SONS of BANE  ·  ALLIANCE AUDIT TOOL  ◈</h1>
-    <p>EVE Online  ·  Fleet Activity &amp; Compliance Reporting</p>
-  </div>
-  <div id="user-info" class="user-bar"></div>
-</div>
-
-<div class="layout">
-
-  <aside class="sidebar">
-
-    <div class="card" id="card-creds">
-      <div class="card-header">SESSION CREDENTIALS</div>
-      <div class="card-body">
-        <div id="cred-fields">
-          <div>
-            <label>Session ID (sessionid= from Chrome DevTools → Cookies)</label>
-            <input type="password" id="session-id" placeholder="paste session id…" autocomplete="off"/>
-          </div>
-          <div>
-            <label>CSRF Token (csrftoken= value)</label>
-            <input type="password" id="csrf-token" placeholder="paste csrf token…" autocomplete="off"/>
-          </div>
-          <div class="row">
-            <button class="btn-teal" id="btn-save-creds" onclick="saveCredentials()">💾 Save Credentials</button>
-          </div>
-        </div>
-        <div id="cred-status" class="status-badge"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">AUDIT TARGET</div>
-      <div class="card-body">
-        <div>
-          <label>Corporation</label>
-          <div class="row">
-            <select id="corp-select"><option value="">— click Load Corps —</option></select>
-            <button class="btn-dim btn-icon" title="Load corps" onclick="loadCorps()">⟳</button>
-          </div>
-        </div>
-        <div>
-          <label>Audit Year</label>
-          <select id="year-select"></select>
-        </div>
-        <div>
-          <label>AFAT CSV — current month supplement (optional)</label>
-          <input type="file" id="fat-csv" accept=".csv"
-            style="padding:4px 0;background:transparent;border:none;color:var(--grey);font-size:11px;cursor:pointer;width:100%"/>
-        </div>
-        <button class="btn-cyan btn-full" onclick="runCorp()" id="btn-corp">▶ Run Corp Report</button>
-        <button class="btn-gold btn-full" onclick="runAlliance()" id="btn-alliance">★ Run ALL SONS of BANE Corps</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">CSV FLEET IMPORT</div>
-      <div class="card-body">
-        <div>
-          <label>AFAT CSV Export File</label>
-          <input type="file" id="csv-file" accept=".csv"
-            style="padding:4px 0;background:transparent;border:none;color:var(--grey);font-size:11px;cursor:pointer;width:100%"/>
-        </div>
-        <div>
-          <label>Report Name</label>
-          <input type="text" id="csv-report-name" placeholder="e.g. May 2026 Fleet Activity" value="Fleet Activity"/>
-        </div>
-        <button class="btn-teal btn-full" onclick="runCsvImport()" id="btn-csv">📊 Build CSV Report</button>
-      </div>
-    </div>
-
-    <div class="card" id="card-cache">
-      <div class="card-header">OUTPUT</div>
-      <div class="card-body">
-        <div id="cache-stats" class="status-badge">—</div>
-        <div class="row">
-          <button class="btn-dim" style="flex:1" onclick="refreshCache()">↻ Refresh Stats</button>
-          <button class="btn-red"  style="flex:1" onclick="clearCache()">🗑 Clear Cache</button>
-        </div>
-      </div>
-    </div>
-
-  </aside>
-
-  <div class="main-panel">
-
-    <div class="panel-tabs">
-      <button id="tab-btn-log"    class="tab-btn active" onclick="showTab('log')">OUTPUT LOG</button>
-      <button id="tab-btn-report" class="tab-btn"        onclick="showTab('report')">REPORT</button>
-      <div class="tab-spacer"></div>
-      <button class="btn-dim tab-clear" onclick="clearLog()">Clear</button>
-    </div>
-
-    <div id="view-log" class="tab-view">
-      <div id="log"></div>
-    </div>
-
-    <div id="view-report" class="tab-view" style="display:none">
-      <div class="report-toolbar">
-        <input type="text"   id="rpt-filter" placeholder="Filter by name…" oninput="filterReport()"/>
-        <select id="rpt-rating" onchange="filterReport()">
-          <option value="">All ratings</option>
-          <option value="ELITE">★ ELITE</option>
-          <option value="ACTIVE">◆ ACTIVE</option>
-          <option value="PARTIAL">▷ PARTIAL</option>
-          <option value="GHOST">○ GHOST</option>
-        </select>
-        <select id="rpt-corp" onchange="filterReport()" style="display:none">
-          <option value="">All Corps</option>
-        </select>
-        <div id="rpt-pages" style="display:none; align-items:center; gap:4px">
-          <button class="btn-dim" style="padding:3px 8px;font-size:10px" onclick="changePage(-1)" id="btn-prev">◀</button>
-          <span id="rpt-page-label" style="color:var(--grey);font-size:10px;white-space:nowrap"></span>
-          <button class="btn-dim" style="padding:3px 8px;font-size:10px" onclick="changePage(1)" id="btn-next">▶</button>
-        </div>
-        <span id="rpt-summary"></span>
-      </div>
-      <div class="report-scroll">
-        <table id="report-table">
-          <thead id="rt-head"></thead>
-          <tbody id="rt-body"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div id="download-bar">
-      <span id="download-label">Report ready</span>
-      <button class="btn-teal" onclick="downloadReport()">⬇ Download PDF</button>
-    </div>
-
-  </div>
-</div>
-
-<div class="statusbar" id="statusbar">Ready.</div>
-
-<script src="/app.js"></script>
+  return r;
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async function init() {
@@ -620,6 +289,7 @@ async function loadReport(pdfFile) {
   if (!r || !r.ok) return;
   _reportData = await r.json();
   _sortState  = { col: 'totalFats', dir: -1 };
+  _page = 0;
   document.getElementById('rpt-filter').value = '';
   document.getElementById('rpt-rating').value = '';
 
@@ -653,6 +323,7 @@ function filterReport() {
   if (ratingF) members = members.filter(m => tierLabel(m.totalFats) === ratingF);
 
   _filteredRows = members;
+  _page = 0;
   applySort();
 }
 
@@ -681,6 +352,12 @@ function sortBy(col) {
     ? { col, dir: _sortState.dir === -1 ? 1 : -1 }
     : { col, dir: -1 };
   applySort();
+}
+
+function changePage(dir) {
+  const maxPage = Math.max(0, Math.ceil(_filteredRows.length / PAGE_SIZE) - 1);
+  _page = Math.max(0, Math.min(maxPage, _page + dir));
+  renderTableBody();
 }
 
 // ── Report: build headers ─────────────────────────────────────────────────────
@@ -750,8 +427,10 @@ function renderTableBody() {
   const tbody = document.getElementById('rt-body');
   tbody.innerHTML = '';
 
+  const pageRows = _filteredRows.slice(_page * PAGE_SIZE, (_page + 1) * PAGE_SIZE);
+
   if (_reportData.type === 'csv') {
-    _filteredRows.forEach((m, i) => {
+    pageRows.forEach((m, i) => {
       const [tier, cls] = tierInfo(m.totalFats);
       const tr = document.createElement('tr');
       const ft = m.fleetTypes || {};
@@ -761,7 +440,7 @@ function renderTableBody() {
       };
       const incurs = (ft['Incursion-HQ'] || 0) + (ft['Incursion-VG'] || 0);
       const cells = [
-        td(i + 1,           'center', '#8B949E'),
+        td(_page * PAGE_SIZE + i + 1, 'center', '#8B949E'),
         td(m.name,          'left',   '#FFFFFF', true),
         td(m.totalFats,     'center', fatColor(m.totalFats), true),
         ftv('STRATEGIC',            '#00E5CC'),
@@ -788,12 +467,12 @@ function renderTableBody() {
     const year   = _reportData.year;
     const months = getMonths(year);
 
-    _filteredRows.forEach((m, i) => {
+    pageRows.forEach((m, i) => {
       const [tier, cls] = tierInfo(m.totalFats);
       const tr = document.createElement('tr');
 
       const cells = [
-        td(i + 1,                   'center', '#8B949E'),
+        td(_page * PAGE_SIZE + i + 1, 'center', '#8B949E'),
         td(m.name,                  'left',   '#FFFFFF', true),
         td(m.topAssetSystem || '—', 'left',   m.topAssetSystem ? '#27AE60' : '#8B949E'),
       ];
@@ -840,6 +519,19 @@ function renderTableBody() {
   const pct    = n ? Math.round(active / n * 100) : 0;
   document.getElementById('rpt-summary').textContent =
     `${n}${n !== total ? ' / ' + total : ''} pilots  ·  ${pct}% participation  ·  ★${elite}  ○${ghost}`;
+
+  // Pagination controls
+  const totalPages = Math.max(1, Math.ceil(_filteredRows.length / PAGE_SIZE));
+  const pagesDiv  = document.getElementById('rpt-pages');
+  const pageLabel = document.getElementById('rpt-page-label');
+  if (totalPages > 1) {
+    pagesDiv.style.display = 'flex';
+    pageLabel.textContent  = `${_page + 1} / ${totalPages}`;
+    document.getElementById('btn-prev').disabled = _page === 0;
+    document.getElementById('btn-next').disabled = _page >= totalPages - 1;
+  } else {
+    pagesDiv.style.display = 'none';
+  }
 }
 
 // ── Report helpers ────────────────────────────────────────────────────────────
@@ -914,6 +606,3 @@ function setBadge(id, text, cls) {
   el.textContent = text;
   el.className = `status-badge ${cls || ''}`;
 }
-</script>
-</body>
-</html>

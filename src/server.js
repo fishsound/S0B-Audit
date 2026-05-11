@@ -14,7 +14,7 @@ expressWs(app);          // must be called before routes so app.ws() exists
 // Trust Railway's reverse proxy so req.secure is correct for cookie flags
 app.set('trust proxy', 1);
 
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 app.use(session({
   secret:            SESSION_SECRET,
   resave:            false,
