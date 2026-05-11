@@ -114,9 +114,10 @@ async function testBuildAltCountMap() {
 
   console.log('  altMap contents:', Object.fromEntries(altMap));
 
-  check('Brahiem altCount = 5',    altMap.get('Brahiem')   ?? 0, 5);
-  check('OtherMain altCount = 2',  altMap.get('OtherMain') ?? 0, 2);
-  check('no false positives',       altMap.size,                  2);
+  // Map is now keyed by Auth PK (integer), not by name.
+  check('Brahiem altCount = 5',    altMap.get(1000) ?? 0, 5);
+  check('OtherMain altCount = 2',  altMap.get(2000) ?? 0, 2);
+  check('no false positives',       altMap.size,           2);
 }
 
 // ── Section 3: enrich() — altCount survives Object.assign ────────────────────

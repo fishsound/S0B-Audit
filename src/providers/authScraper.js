@@ -304,16 +304,28 @@ class AllianceAuthProvider extends BaseProvider {
   async _buildAltCountMap() {
     if (this._altMapCache) return this._altMapCache;
     const all = await this._finderRaw('');
+
+    // Pass 1: build name → Auth PK map from main rows (col 0 anchor).
+    // This lets us resolve plain-text col 2 entries in pass 2.
+    const pkByName = new Map();
+    for (const r of all) {
+      if (r.length < 13 || r[10] !== 'yes') continue;
+      const [pk, name] = this._parseNameCell(r[0]);
+      if (pk && name) pkByName.set(name, pk);
+    }
+
+    // Pass 2: count alts keyed by the main's Auth PK.
+    // Keying by PK avoids any name-rendering differences between the col-2
+    // anchor text and the name returned by the character_viewer overview page.
     const map = new Map();
     for (const r of all) {
       if (r.length < 13 || r[10] === 'yes') continue;
-      // column 2 is usually an anchor to /member-audit/character_viewer/<pk>/;
-      // some Alliance Auth builds render it as plain text.  Try anchor first,
-      // fall back to stripping HTML so plain-text main names are not missed.
-      const [, anchorName] = this._parseNameCell(r[2] || '');
+      const [mainPk, anchorName] = this._parseNameCell(r[2] || '');
       const mainName = anchorName || stripHtml(r[2] || '');
-      if (mainName) map.set(mainName, (map.get(mainName) || 0) + 1);
+      const key = mainPk || pkByName.get(mainName);
+      if (key) map.set(key, (map.get(key) || 0) + 1);
     }
+
     this._altMapCache = map;
     return map;
   }
@@ -343,7 +355,7 @@ class AllianceAuthProvider extends BaseProvider {
     // altCount set before that loop would be silently reset to zero.
     log(`      building alt counts…`, 'grey');
     const altMap = await this._buildAltCountMap();
-    for (const ch of chars) ch.altCount = altMap.get(ch.name) || 0;
+    for (const ch of chars) ch.altCount = altMap.get(ch.pk) || 0;
 
     log(`      fetching asset locations (${chars.length} chars)…`, 'grey');
     await Promise.all(chars.map(ch => this._limit(async () => {
