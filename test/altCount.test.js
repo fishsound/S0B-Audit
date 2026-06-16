@@ -110,14 +110,24 @@ async function testBuildAltCountMap() {
   // Monkey-patch _finderRaw to return mock data
   provider._finderRaw = async () => finderData;
 
-  const altMap = await provider._buildAltCountMap();
+  const { byPk, byName, diag } = await provider._buildAltCountMap();
 
-  console.log('  altMap contents:', Object.fromEntries(altMap));
+  console.log('  byPk  :', Object.fromEntries(byPk));
+  console.log('  byName:', Object.fromEntries(byName));
+  console.log('  diag  :', diag);
 
-  // Map is now keyed by Auth PK (integer), not by name.
-  check('Brahiem altCount = 5',    altMap.get(1000) ?? 0, 5);
-  check('OtherMain altCount = 2',  altMap.get(2000) ?? 0, 2);
-  check('no false positives',       altMap.size,           2);
+  // PK-keyed map (primary correlation)
+  check('Brahiem altCount = 5 (byPk)',    byPk.get(1000) ?? 0, 5);
+  check('OtherMain altCount = 2 (byPk)',  byPk.get(2000) ?? 0, 2);
+  check('no false positives (byPk)',       byPk.size,           2);
+
+  // Name-keyed map (fallback correlation) — must agree
+  check('Brahiem altCount = 5 (byName)',   byName.get('brahiem')   ?? 0, 5);
+  check('OtherMain altCount = 2 (byName)', byName.get('othermain') ?? 0, 2);
+
+  // The plain-text col-2 alt must resolve via the name→pk catalogue, not be lost
+  check('all alts resolved (none unresolved)', diag.unresolved, 0);
+  check('alt rows counted', diag.altRows, 7);
 }
 
 // ── Section 3: enrich() — altCount survives Object.assign ────────────────────
