@@ -374,10 +374,20 @@ class AllianceAuthProvider extends BaseProvider {
       }
     }
 
+    // Capture one real main row and one real alt row so the exact, untruncated
+    // column layout of THIS Auth install can be inspected (see enrich()).
+    let sampleMain = null, sampleAlt = null;
+    for (const r of all) {
+      if (r.length < 13) continue;
+      if (!sampleMain && r[10] === 'yes') sampleMain = r;
+      if (!sampleAlt  && r[10] === 'no')  sampleAlt  = r;
+      if (sampleMain && sampleAlt) break;
+    }
+
     this._altMapCache = {
       byPk,
       byName,
-      diag: { totalRows: all.length, mainRows, altRows, viaPk, viaEveId, viaName, unresolved, unresolvedSamples },
+      diag: { totalRows: all.length, mainRows, altRows, viaPk, viaEveId, viaName, unresolved, unresolvedSamples, sampleMain, sampleAlt },
     };
     return this._altMapCache;
   }
@@ -422,6 +432,13 @@ class AllianceAuthProvider extends BaseProvider {
     log(`      alt-match: ${matchedPk} mains by pk, ${matchedName} by name, ${zero} with 0 alts (of ${chars.length})`, 'grey');
     if (diag.unresolved && diag.unresolvedSamples.length) {
       log(`      ⚠ unresolved main cells (sample): ${diag.unresolvedSamples.map(s => JSON.stringify(s.slice(0, 80))).join(' | ')}`, 'gold');
+    }
+    // Ground-truth dump: every column of one real main row and one real alt
+    // row, untruncated, so the actual Auth schema is visible (no guessing).
+    for (const [label, row] of [['MAIN', diag.sampleMain], ['ALT', diag.sampleAlt]]) {
+      if (!row) continue;
+      log(`      ── raw finder ${label} row (${row.length} cols) ──`, 'cyan');
+      row.forEach((c, i) => log(`        [${String(i).padStart(2)}] ${JSON.stringify(String(c))}`, 'grey'));
     }
 
     log(`      fetching asset locations (${chars.length} chars)…`, 'grey');
