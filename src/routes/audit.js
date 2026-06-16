@@ -29,6 +29,45 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// ── Report access control ───────────────────────────────────────────────────
+// Read just the leading metadata of a report's JSON sidecar. The ACL fields
+// (type / corpId / ownerCharId) are written first, so a 512-byte head is
+// enough — we never parse the (potentially multi-MB) member arrays.
+function loadReportMeta(fname) {
+  const jsonPath = path.join(REPORTS_DIR, fname.replace('.pdf', '.json'));
+  let fd;
+  try {
+    fd = fs.openSync(jsonPath, 'r');
+    const buf = Buffer.alloc(512);
+    const n   = fs.readSync(fd, buf, 0, 512, 0);
+    const head = buf.subarray(0, n).toString('utf8');
+    const type   = (head.match(/"type"\s*:\s*"([^"]+)"/)        || [])[1] || null;
+    const corpId = (head.match(/"corpId"\s*:\s*(\d+)/)          || [])[1];
+    const owner  = (head.match(/"ownerCharId"\s*:\s*(\d+)/)     || [])[1];
+    return {
+      type,
+      corpId:      corpId ? Number(corpId) : null,
+      ownerCharId: owner  ? Number(owner)  : null,
+    };
+  } catch {
+    return null;
+  } finally {
+    if (fd !== undefined) { try { fs.closeSync(fd); } catch {} }
+  }
+}
+
+// Non-admins may only access reports for their own corp (corp reports) or
+// reports they generated themselves (CSV imports). Alliance reports are
+// admin-only. If ownership cannot be verified, access is denied.
+function canAccessReport(user, fname) {
+  if (user.role === 'admin') return true;
+  const meta = loadReportMeta(fname);
+  if (!meta) return false;
+  if (meta.type === 'corp') return meta.corpId != null && String(meta.corpId) === String(user.corpId);
+  if (meta.type === 'csv')  return meta.ownerCharId != null && meta.ownerCharId === user.charId;
+  return false; // alliance or unknown → admin only
+}
+
 // ── CSV helpers ───────────────────────────────────────────────────────────────
 
 const CSV_FLEET_TYPES = [
@@ -139,11 +178,18 @@ module.exports = (app) => {
   // ── REST: list corps ────────────────────────────────────────────────────────
   app.get('/api/corps', requireMember, async (req, res) => {
     try {
+      const user = req.session.user;
       const { sessionId, csrfToken } = loadCredentials(ENV_FILE);
       const auth  = new AllianceAuthProvider(sessionId, csrfToken);
       const now   = new Date();
       const corps = await auth.listAllianceCorps(now.getFullYear(), now.getMonth() + 1);
-      res.json(corps.map(([id, name]) => ({ id, name })));
+      let list = corps.map(([id, name]) => ({ id, name }));
+      // Non-admins may only see (and therefore audit) their own corporation.
+      if (user.role !== 'admin') {
+        list = list.filter(c => String(c.id) === String(user.corpId));
+        if (!list.length && user.corpId) list = [{ id: user.corpId, name: user.corpName || `Corp ${user.corpId}` }];
+      }
+      res.json(list);
     } catch (e) {
       res.status(e.message.includes('Credentials') ? 401 : 502).json({ detail: e.message });
     }
@@ -155,10 +201,10 @@ module.exports = (app) => {
     if (!corp_id || !corp_name)
       return res.status(400).json({ detail: 'corp_id and corp_name are required.' });
 
-    // Members can only audit their own corporation
+    // Only admins may audit a corporation other than their own.
     const user = req.session.user;
-    if (user.role === 'member' && String(corp_id) !== String(user.corpId))
-      return res.status(403).json({ detail: 'Members can only audit their own corporation.' });
+    if (user.role !== 'admin' && String(corp_id) !== String(user.corpId))
+      return res.status(403).json({ detail: 'You may only audit your own corporation.' });
 
     let auth, esi;
     try {
@@ -186,7 +232,7 @@ module.exports = (app) => {
           buildCorpPdf(corp_name, corp.members, year, path.join(REPORTS_DIR, fname), extraCols),
           fs.promises.writeFile(
             path.join(REPORTS_DIR, fname.replace('.pdf', '.json')),
-            JSON.stringify({ type: 'corp', corpName: corp_name, year, generatedAt: new Date().toISOString(), members: corp.members }),
+            JSON.stringify({ type: 'corp', corpId: corp_id, ownerCharId: user.charId, corpName: corp_name, year, generatedAt: new Date().toISOString(), members: corp.members }),
           ),
         ]);
         job.resultFile = fname;
@@ -229,7 +275,7 @@ module.exports = (app) => {
           buildAlliancePdf(corps, year, path.join(REPORTS_DIR, fname), extraCols),
           fs.promises.writeFile(
             path.join(REPORTS_DIR, fname.replace('.pdf', '.json')),
-            JSON.stringify({ type: 'alliance', year, generatedAt: new Date().toISOString(), corps: corps.map(c => ({ corpId: c.corpId, name: c.name, members: c.members })) }),
+            JSON.stringify({ type: 'alliance', ownerCharId: req.session.user.charId, year, generatedAt: new Date().toISOString(), corps: corps.map(c => ({ corpId: c.corpId, name: c.name, members: c.members })) }),
           ),
         ]);
         job.resultFile = fname;
@@ -252,6 +298,7 @@ module.exports = (app) => {
     const members = rows.map(csvRowToMember).filter(Boolean);
     if (!members.length) return res.status(400).json({ detail: 'No valid members in CSV.' });
 
+    const ownerCharId = req.session.user.charId;
     const jobId = createJob();
     const job   = jobs.get(jobId);
     res.json({ job_id: jobId });
@@ -266,7 +313,7 @@ module.exports = (app) => {
           buildCsvPdf(reportName, members, path.join(REPORTS_DIR, fname)),
           fs.promises.writeFile(
             path.join(REPORTS_DIR, fname.replace('.pdf', '.json')),
-            JSON.stringify({ type: 'csv', reportName, generatedAt: new Date().toISOString(), members }),
+            JSON.stringify({ type: 'csv', ownerCharId, reportName, generatedAt: new Date().toISOString(), members }),
           ),
         ]);
         job.resultFile = fname;
@@ -286,6 +333,8 @@ module.exports = (app) => {
       return res.status(400).json({ detail: 'Invalid filename.' });
     const jsonPath = path.join(REPORTS_DIR, fname.replace('.pdf', '.json'));
     if (!fs.existsSync(jsonPath)) return res.status(404).json({ detail: 'Report data not found.' });
+    if (!canAccessReport(req.session.user, fname))
+      return res.status(403).json({ detail: 'You do not have access to this report.' });
     res.sendFile(jsonPath);
   });
 
@@ -296,6 +345,8 @@ module.exports = (app) => {
       return res.status(400).json({ detail: 'Invalid filename.' });
     const p = path.join(REPORTS_DIR, fname);
     if (!fs.existsSync(p)) return res.status(404).json({ detail: 'Report not found.' });
+    if (!canAccessReport(req.session.user, fname))
+      return res.status(403).json({ detail: 'You do not have access to this report.' });
     res.download(p, fname);
   });
 
@@ -328,3 +379,7 @@ module.exports = (app) => {
   });
 
 };
+
+// Exposed for unit testing of the report access-control logic.
+module.exports.loadReportMeta   = loadReportMeta;
+module.exports.canAccessReport  = canAccessReport;
