@@ -300,34 +300,69 @@ class AllianceAuthProvider extends BaseProvider {
   }
 
   // ── Alt counting ──────────────────────────────────────────────────────────
+  //
+  // Definition (per spec): a main's alt count = (number of alliance characters
+  // whose main is that main) − 1, i.e. every registered character belonging to
+  // the same user, excluding the main itself.
+  //
+  // Correlation strategy, most-reliable first:
+  //   1. Auth PK from the col-2 main anchor (/character_viewer/<main_pk>/),
+  //      matched against the main's own col-0 Auth PK.
+  //   2. Normalised main NAME (col-2 anchor text, or stripHtml of col-2 when
+  //      the cell is plain text), matched against the main's col-0 name.
+  // We expose BOTH a PK-keyed and a name-keyed map so enrich() can fall back.
 
   async _buildAltCountMap() {
     if (this._altMapCache) return this._altMapCache;
     const all = await this._finderRaw('');
 
-    // Pass 1: build name → Auth PK map from main rows (col 0 anchor).
-    // This lets us resolve plain-text col 2 entries in pass 2.
-    const pkByName = new Map();
+    const norm = (s) => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+    // Pass 1: catalogue every main's identity from its own row (col 0).
+    const pkByName = new Map();   // normalised main name → Auth PK
+    const nameByPk = new Map();   // Auth PK → normalised main name
+    let mainRows = 0;
     for (const r of all) {
       if (r.length < 13 || r[10] !== 'yes') continue;
+      mainRows++;
       const [pk, name] = this._parseNameCell(r[0]);
-      if (pk && name) pkByName.set(name, pk);
+      if (pk)            nameByPk.set(pk, norm(name));
+      if (pk && name)    pkByName.set(norm(name), pk);
     }
 
-    // Pass 2: count alts keyed by the main's Auth PK.
-    // Keying by PK avoids any name-rendering differences between the col-2
-    // anchor text and the name returned by the character_viewer overview page.
-    const map = new Map();
+    // Pass 2: attribute every alt (is_main = "no") to a main.
+    const byPk   = new Map();   // main Auth PK        → alt count
+    const byName = new Map();   // normalised main name → alt count
+    let altRows = 0, viaPk = 0, viaName = 0, unresolved = 0;
+    const unresolvedSamples = [];
     for (const r of all) {
       if (r.length < 13 || r[10] === 'yes') continue;
+      altRows++;
       const [mainPk, anchorName] = this._parseNameCell(r[2] || '');
-      const mainName = anchorName || stripHtml(r[2] || '');
-      const key = mainPk || pkByName.get(mainName);
-      if (key) map.set(key, (map.get(key) || 0) + 1);
+      const mainNameRaw = anchorName || stripHtml(r[2] || '');
+      const mainName    = norm(mainNameRaw);
+
+      // Resolve the main's Auth PK from whichever signal we have.
+      let pk = mainPk || pkByName.get(mainName) || null;
+      if (mainPk)            viaPk++;
+      else if (pk)           viaName++;
+      else                   { unresolved++; if (unresolvedSamples.length < 5) unresolvedSamples.push(r[2] || '(empty)'); }
+
+      if (pk != null) {
+        byPk.set(pk, (byPk.get(pk) || 0) + 1);
+        const nm = nameByPk.get(pk) || mainName;
+        if (nm) byName.set(nm, (byName.get(nm) || 0) + 1);
+      } else if (mainName) {
+        byName.set(mainName, (byName.get(mainName) || 0) + 1);
+      }
     }
 
-    this._altMapCache = map;
-    return map;
+    this._altMapCache = {
+      byPk,
+      byName,
+      diag: { totalRows: all.length, mainRows, altRows, viaPk, viaName, unresolved, unresolvedSamples },
+    };
+    return this._altMapCache;
   }
 
   // ── Provider entry-point ──────────────────────────────────────────────────
@@ -354,8 +389,23 @@ class AllianceAuthProvider extends BaseProvider {
     // freshly-initialised makeCharacter() (altCount:0) onto each ch, so any
     // altCount set before that loop would be silently reset to zero.
     log(`      building alt counts…`, 'grey');
-    const altMap = await this._buildAltCountMap();
-    for (const ch of chars) ch.altCount = altMap.get(ch.pk) || 0;
+    const { byPk: altByPk, byName: altByName, diag } = await this._buildAltCountMap();
+    const normName = (s) => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    let matchedPk = 0, matchedName = 0, zero = 0;
+    for (const ch of chars) {
+      let n = altByPk.get(ch.pk);
+      if (n != null) { matchedPk++; }
+      else { n = altByName.get(normName(ch.name)); if (n != null) matchedName++; }
+      ch.altCount = n || 0;
+      if (!ch.altCount) zero++;
+    }
+    // Diagnostics — surfaced live so a real run reveals the actual data shape.
+    log(`      alt-map: ${diag.totalRows} rows (${diag.mainRows} mains, ${diag.altRows} alts) · `
+      + `resolved via pk=${diag.viaPk} name=${diag.viaName} unresolved=${diag.unresolved}`, 'grey');
+    log(`      alt-match: ${matchedPk} mains by pk, ${matchedName} by name, ${zero} with 0 alts (of ${chars.length})`, 'grey');
+    if (diag.unresolved && diag.unresolvedSamples.length) {
+      log(`      ⚠ unresolved main cells (sample): ${diag.unresolvedSamples.map(s => JSON.stringify(s.slice(0, 80))).join(' | ')}`, 'gold');
+    }
 
     log(`      fetching asset locations (${chars.length} chars)…`, 'grey');
     await Promise.all(chars.map(ch => this._limit(async () => {

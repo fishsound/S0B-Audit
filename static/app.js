@@ -66,6 +66,9 @@ async function apiFetch(url, opts) {
     }
     refreshCache();
   }
+
+  // Preload the corp list so the user doesn't have to click the load button.
+  loadCorps();
 })();
 
 // ── Credentials ───────────────────────────────────────────────────────────────
