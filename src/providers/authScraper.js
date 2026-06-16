@@ -301,16 +301,16 @@ class AllianceAuthProvider extends BaseProvider {
 
   // ── Alt counting ──────────────────────────────────────────────────────────
   //
-  // Definition (per spec): a main's alt count = (number of alliance characters
-  // whose main is that main) − 1, i.e. every registered character belonging to
-  // the same user, excluding the main itself.
+  // Definition: a main's alt count = number of alliance characters whose main
+  // is that character.
   //
-  // Correlation strategy, most-reliable first:
-  //   1. Auth PK from the col-2 main anchor (/character_viewer/<main_pk>/),
-  //      matched against the main's own col-0 Auth PK.
-  //   2. Normalised main NAME (col-2 anchor text, or stripHtml of col-2 when
-  //      the cell is plain text), matched against the main's col-0 name.
-  // We expose BOTH a PK-keyed and a name-keyed map so enrich() can fall back.
+  // This Alliance Auth build renders col 2 (main cell) as a portrait <img> only:
+  //   <img src="https://images.evetech.net/characters/{mainEveId}/portrait?...">
+  // with no <a> anchor.  The main's EVE character ID is in the img src.
+  // Pass 1 builds an eveId → Auth PK map from main rows (col 12 = EVE ID,
+  // col 0 anchor = Auth PK).  Pass 2 extracts the EVE ID from the col-2 img
+  // src and resolves to Auth PK.  Auth-PK anchor and plain-text name are kept
+  // as lower-priority fallbacks for installs that do include an anchor.
 
   async _buildAltCountMap() {
     if (this._altMapCache) return this._altMapCache;
@@ -318,35 +318,52 @@ class AllianceAuthProvider extends BaseProvider {
 
     const norm = (s) => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
 
-    // Pass 1: catalogue every main's identity from its own row (col 0).
-    const pkByName = new Map();   // normalised main name → Auth PK
-    const nameByPk = new Map();   // Auth PK → normalised main name
+    function eveIdFromImgSrc(html) {
+      const m = (html || '').match(/\/characters\/(\d+)\/portrait/);
+      return m ? parseInt(m[1]) : null;
+    }
+
+    // Pass 1: build identity maps for every main row.
+    const pkByName  = new Map();  // norm(name) → Auth PK
+    const nameByPk  = new Map();  // Auth PK    → norm(name)
+    const eveIdToPk = new Map();  // EVE ID     → Auth PK
     let mainRows = 0;
     for (const r of all) {
       if (r.length < 13 || r[10] !== 'yes') continue;
       mainRows++;
-      const [pk, name] = this._parseNameCell(r[0]);
-      if (pk)            nameByPk.set(pk, norm(name));
-      if (pk && name)    pkByName.set(norm(name), pk);
+      const [authPk, name] = this._parseNameCell(r[0]);
+      const eveId = parseInt(r[12]) || null;
+      if (authPk) {
+        nameByPk.set(authPk, norm(name));
+        if (name) pkByName.set(norm(name), authPk);
+      }
+      if (eveId && authPk) eveIdToPk.set(eveId, authPk);
     }
 
-    // Pass 2: attribute every alt (is_main = "no") to a main.
-    const byPk   = new Map();   // main Auth PK        → alt count
-    const byName = new Map();   // normalised main name → alt count
-    let altRows = 0, viaPk = 0, viaName = 0, unresolved = 0;
+    // Pass 2: attribute every alt to a main via the best available signal.
+    //   Priority: Auth PK anchor in col 2 > EVE ID in col-2 img src > name text
+    const byPk   = new Map();
+    const byName = new Map();
+    let altRows = 0, viaPk = 0, viaEveId = 0, viaName = 0, unresolved = 0;
     const unresolvedSamples = [];
     for (const r of all) {
       if (r.length < 13 || r[10] === 'yes') continue;
       altRows++;
-      const [mainPk, anchorName] = this._parseNameCell(r[2] || '');
+
+      const [mainAuthPk, anchorName] = this._parseNameCell(r[2] || '');
+      const mainEveId   = eveIdFromImgSrc(r[2] || '');
       const mainNameRaw = anchorName || stripHtml(r[2] || '');
       const mainName    = norm(mainNameRaw);
 
-      // Resolve the main's Auth PK from whichever signal we have.
-      let pk = mainPk || pkByName.get(mainName) || null;
-      if (mainPk)            viaPk++;
-      else if (pk)           viaName++;
-      else                   { unresolved++; if (unresolvedSamples.length < 5) unresolvedSamples.push(r[2] || '(empty)'); }
+      const pkViaEveId = eveIdToPk.get(mainEveId);
+      const pkViaName  = pkByName.get(mainName);
+
+      let pk = mainAuthPk || pkViaEveId || pkViaName || null;
+
+      if      (mainAuthPk) viaPk++;
+      else if (pkViaEveId) viaEveId++;
+      else if (pkViaName)  viaName++;
+      else { unresolved++; if (unresolvedSamples.length < 5) unresolvedSamples.push(r[2] || '(empty)'); }
 
       if (pk != null) {
         byPk.set(pk, (byPk.get(pk) || 0) + 1);
@@ -360,7 +377,7 @@ class AllianceAuthProvider extends BaseProvider {
     this._altMapCache = {
       byPk,
       byName,
-      diag: { totalRows: all.length, mainRows, altRows, viaPk, viaName, unresolved, unresolvedSamples },
+      diag: { totalRows: all.length, mainRows, altRows, viaPk, viaEveId, viaName, unresolved, unresolvedSamples },
     };
     return this._altMapCache;
   }
@@ -401,7 +418,7 @@ class AllianceAuthProvider extends BaseProvider {
     }
     // Diagnostics — surfaced live so a real run reveals the actual data shape.
     log(`      alt-map: ${diag.totalRows} rows (${diag.mainRows} mains, ${diag.altRows} alts) · `
-      + `resolved via pk=${diag.viaPk} name=${diag.viaName} unresolved=${diag.unresolved}`, 'grey');
+      + `resolved via pk=${diag.viaPk} eveId=${diag.viaEveId} name=${diag.viaName} unresolved=${diag.unresolved}`, 'grey');
     log(`      alt-match: ${matchedPk} mains by pk, ${matchedName} by name, ${zero} with 0 alts (of ${chars.length})`, 'grey');
     if (diag.unresolved && diag.unresolvedSamples.length) {
       log(`      ⚠ unresolved main cells (sample): ${diag.unresolvedSamples.map(s => JSON.stringify(s.slice(0, 80))).join(' | ')}`, 'gold');

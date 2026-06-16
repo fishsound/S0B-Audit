@@ -77,16 +77,32 @@ async function testBuildAltCountMap() {
     return row;
   }
 
+  // Main rows use col 12 as the EVE ID (Auth PK ≠ EVE ID in practice;
+  // for test simplicity we set them equal so eveIdToPk lookup works).
+  function makeMainRow(pk, name) {
+    const row = new Array(13).fill('');
+    row[0]  = `<a href="/member-audit/character_viewer/${pk}/">${name}</a>`;
+    row[10] = 'yes';
+    row[12] = String(pk);  // EVE char ID (same value as Auth PK in test)
+    return row;
+  }
+
   function makeAltRow(altPk, altName, mainPk, mainName, format = 'anchor') {
     const row = new Array(13).fill('');
     row[0]  = `<a href="/member-audit/character_viewer/${altPk}/">${altName}</a>`;
     row[10] = 'no';
     row[12] = String(altPk);
     if (format === 'anchor') {
+      // Old Alliance Auth: anchor in col 2
       row[2] = `<a href="/member-audit/character_viewer/${mainPk}/">${mainName}</a>`;
     } else if (format === 'img+anchor') {
-      row[2] = `<img src="/eve/${mainPk}" alt="Portrait"> `
+      // Mix: portrait img + anchor
+      row[2] = `<img src="https://images.evetech.net/characters/${mainPk}/portrait?size=32"> `
              + `<a href="/member-audit/character_viewer/${mainPk}/">${mainName}</a>`;
+    } else if (format === 'img-only') {
+      // Modern Alliance Auth: portrait img only (real production format)
+      row[2] = `<img class="ra-avatar img-circle" width="32" height="32" `
+             + `src="https://images.evetech.net/characters/${mainPk}/portrait?tenant=tranquility&size=32">`;
     } else {
       row[2] = mainName;  // plain text
     }
@@ -96,14 +112,14 @@ async function testBuildAltCountMap() {
   const finderData = [
     makeMainRow(1000, 'Brahiem'),
     makeMainRow(2000, 'OtherMain'),
-    // 5 alts for Brahiem: mix of formats
+    // 5 alts for Brahiem: one of each format (including production img-only)
     makeAltRow(1001, 'BrahiemAlt1', 1000, 'Brahiem', 'anchor'),
-    makeAltRow(1002, 'BrahiemAlt2', 1000, 'Brahiem', 'anchor'),
-    makeAltRow(1003, 'BrahiemAlt3', 1000, 'Brahiem', 'img+anchor'),
-    makeAltRow(1004, 'BrahiemAlt4', 1000, 'Brahiem', 'img+anchor'),
+    makeAltRow(1002, 'BrahiemAlt2', 1000, 'Brahiem', 'img+anchor'),
+    makeAltRow(1003, 'BrahiemAlt3', 1000, 'Brahiem', 'img-only'),   // production format
+    makeAltRow(1004, 'BrahiemAlt4', 1000, 'Brahiem', 'img-only'),
     makeAltRow(1005, 'BrahiemAlt5', 1000, 'Brahiem', 'plain-text'),
     // 2 alts for OtherMain
-    makeAltRow(2001, 'OtherAlt1', 2000, 'OtherMain', 'anchor'),
+    makeAltRow(2001, 'OtherAlt1', 2000, 'OtherMain', 'img-only'),   // production format
     makeAltRow(2002, 'OtherAlt2', 2000, 'OtherMain', 'anchor'),
   ];
 
@@ -125,9 +141,11 @@ async function testBuildAltCountMap() {
   check('Brahiem altCount = 5 (byName)',   byName.get('brahiem')   ?? 0, 5);
   check('OtherMain altCount = 2 (byName)', byName.get('othermain') ?? 0, 2);
 
-  // The plain-text col-2 alt must resolve via the name→pk catalogue, not be lost
+  // img-only alts resolve via EVE ID extracted from portrait img src
+  check('img-only alts resolved via eveId',    diag.viaEveId,   3);  // 2 Brahiem + 1 OtherMain
+  // plain-text col-2 alt resolves via name→pk catalogue
   check('all alts resolved (none unresolved)', diag.unresolved, 0);
-  check('alt rows counted', diag.altRows, 7);
+  check('alt rows counted',                    diag.altRows,    7);
 }
 
 // ── Section 3: enrich() — altCount survives Object.assign ────────────────────
