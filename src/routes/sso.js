@@ -23,8 +23,8 @@ const { credentialsFromEnv } = require('../utils');
 
 const SSO_AUTH   = 'https://login.eveonline.com/v2/oauth/authorize';
 const SSO_TOKEN  = 'https://login.eveonline.com/v2/oauth/token';
-// Scope needed to check corp roles (Director/CEO) for officer status.
-const SSO_SCOPES = 'esi-characters.read_corporation_roles.v1';
+// No ESI scopes needed — we only use the SSO token to identify the character.
+const SSO_SCOPES = '';
 
 // ── SSO helpers ───────────────────────────────────────────────────────────────
 
@@ -57,10 +57,10 @@ function parseJwt(token) {
   return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
 }
 
-async function esiGet(path, accessToken) {
-  const headers = { 'User-Agent': USER_AGENT };
-  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
-  const r = await axios.get(`https://esi.evetech.net${path}`, { headers, timeout: 10000 });
+async function esiGet(path) {
+  const r = await axios.get(`https://esi.evetech.net${path}`, {
+    headers: { 'User-Agent': USER_AGENT }, timeout: 10000,
+  });
   return r.data;
 }
 
@@ -80,17 +80,7 @@ async function resolveUser(accessToken) {
 
   let role = 'none';
   if (allianceId === SOB_ALLIANCE_ID) {
-    role = 'member';
-
-    // Check corp roles using the scoped token
-    try {
-      const rolesData = await esiGet(`/v2/characters/${charId}/roles/`, accessToken);
-      const roles     = rolesData.roles || [];
-      if (roles.includes('Director') || roles.includes('CEO')) role = 'officer';
-    } catch { /* scope may be missing or ESI down — stay as member */ }
-
-    // Admin override: character ID explicitly listed in ADMIN_CHARS env var
-    if (ADMIN_CHAR_IDS.includes(charId)) role = 'admin';
+    role = ADMIN_CHAR_IDS.includes(charId) ? 'admin' : 'member';
   }
 
   return {

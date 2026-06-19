@@ -3,10 +3,9 @@
 /**
  * Auth middleware — attach to routes to enforce role requirements.
  *
- * Roles (ascending):  member → officer → admin
- *   member  — authenticated S0B alliance member
- *   officer — corp Director or CEO (checked via ESI roles scope)
- *   admin   — character ID listed in ADMIN_CHARS env var
+ * Roles:  member → admin
+ *   member — authenticated S0B alliance member
+ *   admin  — character ID listed in ADMIN_CHARS env var
  */
 const { SOB_ALLIANCE_ID } = require('./config');
 
@@ -18,14 +17,6 @@ function requireMember(req, res, next) {
   next();
 }
 
-function requireOfficer(req, res, next) {
-  requireMember(req, res, () => {
-    if (!['officer', 'admin'].includes(req.session.user.role))
-      return res.status(403).json({ detail: 'Corp Director or higher required.' });
-    next();
-  });
-}
-
 function requireAdmin(req, res, next) {
   requireMember(req, res, () => {
     if (req.session.user.role !== 'admin')
@@ -34,4 +25,4 @@ function requireAdmin(req, res, next) {
   });
 }
 
-module.exports = { requireMember, requireOfficer, requireAdmin };
+module.exports = { requireMember, requireAdmin };

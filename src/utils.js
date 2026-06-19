@@ -23,14 +23,7 @@ function limiter(concurrency) {
 function loadEnvFile(envFile) {
   const fs = require('fs');
   if (!fs.existsSync(envFile)) return {};
-  const env = {};
-  for (const line of fs.readFileSync(envFile, 'utf8').split('\n')) {
-    const t = line.trim();
-    if (!t || t.startsWith('#') || !t.includes('=')) continue;
-    const idx = t.indexOf('=');
-    env[t.slice(0, idx).trim()] = t.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
-  }
-  return env;
+  return require('util').parseEnv(fs.readFileSync(envFile, 'utf8'));
 }
 
 /**
@@ -63,12 +56,8 @@ function loadCredentials(envFile) {
 
 /** Returns true when credentials come from the environment (Railway mode). */
 function credentialsFromEnv() {
-  if (!process.env.SESSION_COOKIE) return false;
-  const { sid, csrf } = (() => {
-    const c = process.env.SESSION_COOKIE;
-    return { sid: c.match(/sessionid=([^;\s]+)/)?.[1], csrf: c.match(/csrftoken=([^;\s]+)/)?.[1] };
-  })();
-  return !!(sid && csrf);
+  const c = process.env.SESSION_COOKIE || '';
+  return /sessionid=[^;\s]/.test(c) && /csrftoken=[^;\s]/.test(c);
 }
 
 module.exports = { sleep, limiter, loadEnvFile, loadCredentials, credentialsFromEnv };

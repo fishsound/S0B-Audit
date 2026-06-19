@@ -1,9 +1,8 @@
 'use strict';
 
 const axios = require('axios');
-const { BaseProvider } = require('./base');
 const { cacheGet, cacheSet } = require('../cache');
-const { ESI_BASE, SOB_ALLIANCE_ID, TTL, USER_AGENT, ESI_CONCURRENCY } = require('../config');
+const { ESI_BASE, SOB_ALLIANCE_ID, TTL, USER_AGENT, ESI_CONCURRENCY, MONTH_ABBRS } = require('../config');
 const { limiter, sleep } = require('../utils');
 
 async function esiGet(path) {
@@ -34,19 +33,13 @@ function formatDuration(startMs) {
   return parts.slice(0, 2).join(', ');
 }
 
-const MONTH_ABBRS = ['Jan','Feb','Mar','Apr','May','Jun',
-                     'Jul','Aug','Sep','Oct','Nov','Dec'];
-
 function fmtDate(isoString) {
   const d = new Date(isoString);
   return `${d.getUTCFullYear()}-${MONTH_ABBRS[d.getUTCMonth()]}-${String(d.getUTCDate()).padStart(2,'0')}`;
 }
 
-class ESIProvider extends BaseProvider {
-  get name() { return 'esi'; }
-
+class ESIProvider {
   constructor() {
-    super();
     this._limit = limiter(ESI_CONCURRENCY);
   }
 

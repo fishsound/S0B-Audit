@@ -1,56 +1,57 @@
 # SONS of BANE Alliance Auth Compliance Audit Tool
 
-Parameterized, live-data replacement for the old hardcoded `mineski_audit.py`.
-Generates sci-fi styled Excel audit reports from `auth.sonsofbane.com` for a single
-character, a single corp, or all 24 SONS of BANE corps at once.
+Web app that generates sci-fi styled PDF audit reports from `auth.sonsofbane.com`
+for a single corp or all SONS of BANE corps at once. Members log in with EVE SSO;
+the app scrapes Alliance Auth (Member Audit + AFAT) and ESI for live data — nothing
+is hardcoded.
 
-## Setup
+## Run
 
 ```bash
-pip install requests beautifulsoup4 openpyxl lxml --break-system-packages
-cp .env.example .env
-# edit .env — paste your session cookie from Chrome DevTools
+npm install
+cp .env.example Auth.env   # see "Configuration" below
+npm start                  # http://localhost:8000
+# npm run dev              # same, with --watch reload
 ```
+
+## Configuration
+
+Set as environment variables (Railway dashboard) or in `Auth.env` for local dev:
+
+| Var | Purpose |
+|-----|---------|
+| `EVE_CLIENT_ID` / `EVE_CLIENT_SECRET` | EVE SSO app — register at https://developers.eveonline.com/ |
+| `EVE_CALLBACK_URL` | Must match the SSO app exactly (default `http://localhost:8000/auth/callback`) |
+| `SESSION_SECRET` | Express session signing secret |
+| `SESSION_COOKIE` | Alliance Auth scraper cookie: `sessionid=…; csrftoken=…` (copy from Chrome DevTools). Admins can also save it via the UI. |
+| `ADMIN_CHARS` | Comma-separated EVE character IDs granted admin access |
+| `PORT` | Defaults to `8000` |
 
 ## Usage
 
-```bash
-# One character
-python sob_audit.py character "aduron"
+Log in with EVE SSO. Access depends on your character:
 
-# One corp by name (partial match) or ID
-python sob_audit.py corp "Mineski Infinity"
-python sob_audit.py corp 98614919
+- **Member** (any SoB character) — audit your own corporation.
+- **Admin** (`ADMIN_CHARS`) — audit any corp, run the full alliance audit, import
+  AFAT CSV reports, manage the scraper cookie, and clear the cache.
 
-# All 24 corps + combined alliance report
-python sob_audit.py alliance
-
-# Options: --year, --out, --env
-python sob_audit.py corp "Mineski Infinity" --year 2026 --out ./reports/
-```
-
-Reports are written to `./reports/` by default as `sob_corp_<name>_<date>.xlsx`,
-`sob_character_<name>_<date>.xlsx`, or `sob_alliance_<date>.xlsx`.
+Reports stream progress over a WebSocket and are written to `./reports/` as
+`sob_corp_<name>_<date>.pdf`, `sob_alliance_<date>.pdf`, or
+`sob_csv_<name>_<date>.pdf` (each with a sibling `.json` for the in-app viewer).
 
 ## Data sources
 
-Data is pulled live from two Alliance Auth plugins — nothing is hardcoded:
-
-- **Member Audit** (`aa-memberaudit`) — character overview, SP, wallet, assets,
-  location, sec status, last login, main/alt relationships
-- **AFAT** (`aa-afat`) — fleet activity (FAT) counts per main per month,
-  correctly attributing alt FATs to mains via the "by main" corp statistics view
+- **Member Audit** (`aa-memberaudit`) — overview, SP, wallet, assets, location,
+  sec status, last login, main/alt relationships
+- **AFAT** (`aa-afat`) — FAT counts per main per month, attributing alt FATs to
+  mains via the "by main" corp statistics view
 - **Character Finder** — authoritative list of characters in a corp
-
-## Styling
-
-Exact match to `mineski_infinity_audit.xlsx`: same dark sci-fi palette, same
-`★ ◆ ▷ ○` tier symbols, same `◈` banner, same three sheets (ROSTER / SUMMARY /
-CHARTS), same column layout and widths.
+- **ESI** — corp/character join dates ("time in alliance")
 
 ## Notes
 
-- The old `mineski_audit.py` (with hardcoded member data) is replaced by this tool
-- Session cookie-based auth only; no credentials are stored or transmitted
-- `REQUEST_DELAY = 0.3` seconds between requests — polite scraping
-- Read-only: the tool never POSTs or modifies data on auth.sonsofbane.com
+- Read-only scraping; the tool never POSTs to or modifies auth.sonsofbane.com.
+- `REQUEST_DELAY = 50ms` between scraper requests; responses are cached under
+  `.cache/` (TTLs in `src/config.js`).
+- Cookie auth only — no Alliance Auth credentials are stored beyond the session
+  cookie you provide.

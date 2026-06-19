@@ -6,7 +6,8 @@ const path   = require('path');
 
 const { collectCorp, collectAlliance } = require('../audit');
 const { REPORTS_DIR, ENV_FILE, MONTH_ABBRS } = require('../config');
-const { AllianceAuthProvider, ESIProvider, EXTRA_PROVIDERS } = require('../providers');
+const { AllianceAuthProvider } = require('../providers/authScraper');
+const { ESIProvider }          = require('../providers/esi');
 const { buildCorpPdf, buildAlliancePdf, buildCsvPdf } = require('../report/pdf');
 const { loadCredentials } = require('../utils');
 const { requireMember, requireAdmin } = require('../middleware');
@@ -142,7 +143,7 @@ module.exports = (app) => {
     (async () => {
       const log = (msg, tag = 'white') => job.messages.push({ msg, tag });
       try {
-        const corp  = await collectCorp(auth, esi, EXTRA_PROVIDERS, corp_id, corp_name, year, log);
+        const corp  = await collectCorp(auth, esi, corp_id, corp_name, year, log);
         applyCsvFats(corp.members, csvFats, year, log);
         const fname = `sob_corp_${safeFilename(corp_name)}_${today()}.pdf`;
         await Promise.all([
@@ -183,7 +184,7 @@ module.exports = (app) => {
     (async () => {
       const log = (msg, tag = 'white') => job.messages.push({ msg, tag });
       try {
-        const corps = await collectAlliance(auth, esi, EXTRA_PROVIDERS, year, log);
+        const corps = await collectAlliance(auth, esi, year, log);
         for (const corp of corps) applyCsvFats(corp.members, csvFats, year, log);
         const fname = `sob_alliance_${today()}.pdf`;
         const total = corps.reduce((s, c) => s + c.members.length, 0);

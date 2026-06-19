@@ -2,7 +2,6 @@
 
 const axios   = require('axios');
 const cheerio = require('cheerio');
-const { BaseProvider } = require('./base');
 const { cacheGet, cacheSet } = require('../cache');
 const { BASE_URL, SOB_ALLIANCE_ID, USER_AGENT, REQUEST_DELAY,
         AUTH_CONCURRENCY, TTL, MONTH_ABBRS } = require('../config');
@@ -32,12 +31,8 @@ function parseSec(s) {
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
-class AllianceAuthProvider extends BaseProvider {
-  get name() { return 'alliance_auth'; }
-  get requiresAuth() { return true; }
-
+class AllianceAuthProvider {
   constructor(sessionId, csrfToken) {
-    super();
     this._limit  = limiter(AUTH_CONCURRENCY);
     this._client = axios.create({
       baseURL: BASE_URL,
@@ -177,38 +172,8 @@ class AllianceAuthProvider extends BaseProvider {
     const h = $('h1,h2').first();
     if (h.length && !result['Character']) result['Character'] = h.text().trim();
 
-    // Extract the assets data URL from this same page so _topAssetSystem doesn't
-    // need a second HTTP round-trip. Look in data-attrs and inline scripts.
-    const assetUrl = this._discoverAssetUrl($, r.data);
-    if (assetUrl) await cacheSet(`asset_url:${pk}`, assetUrl);
-
     await cacheSet(key, result);
     return result;
-  }
-
-  _discoverAssetUrl($, html) {
-    // Strategy 1: data attributes (htmx, Bootstrap tabs, custom loaders)
-    const dataAttrs = ['data-url', 'hx-get', 'data-tab-url', 'data-src'];
-    for (const attr of dataAttrs) {
-      let found = null;
-      $(`[${attr}]`).each((_, el) => {
-        const val = $(el).attr(attr) || '';
-        if (!found && /asset/i.test(val) && val.startsWith('/')) found = val;
-      });
-      if (found) return found;
-    }
-    // Strategy 2: inline <script> blocks — look for a /member-audit/...asset... URL string
-    const scripts = $('script').map((_, s) => $(s).html() || '').toArray().join('\n');
-    const patterns = [
-      /["'](\/member-audit\/[^"'\s]*asset[^"'\s]*data[^"'\s]*)['"]/i,
-      /["'](\/member-audit\/[^"'\s]*asset[^"'\s]*)['"]/i,
-      /url\s*[:=]\s*["'](\/member-audit\/[^"'\s]*asset[^"'\s]*)['"]/i,
-    ];
-    for (const re of patterns) {
-      const m = scripts.match(re);
-      if (m) return m[1];
-    }
-    return null;
   }
 
   _overviewToChar(pk, ov) {
@@ -268,10 +233,7 @@ class AllianceAuthProvider extends BaseProvider {
     if (cached !== null) return cached === '__none__' ? '' : cached;
 
     try {
-      // Prefer the URL discovered from the character viewer page HTML.
-      // Fall back to the most common aa-memberaudit DataTables naming convention.
-      const discovered = await cacheGet(`asset_url:${pk}`, TTL.OVERVIEW);
-      const endpoint   = discovered || `/member-audit/character_assets_data/${pk}/`;
+      const endpoint = `/member-audit/character_assets_data/${pk}/`;
       const r    = await this._get(endpoint, { draw: '1', start: '0', length: '2000' });
       const rows = r.data?.data;
       if (!Array.isArray(rows) || !rows.length) {
