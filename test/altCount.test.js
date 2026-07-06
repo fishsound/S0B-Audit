@@ -175,11 +175,37 @@ async function testEnrichPreservesAltCount() {
   check('OtherMain.altCount = 2 after enrich',  other.altCount,   2);
 }
 
+// ── Section 4: enrich() — alt FATs roll up to the main ────────────────────────
+async function testAltFatRollup() {
+  console.log('\n[4] enrich() — alt FATs roll up to the main (same corp only)');
+
+  const brahiem = makeCharacter(1000, 'Brahiem');   // main; BrahiemAlt1..5 in mock finder
+  const chars   = [brahiem];
+  const now     = new Date();
+  const ABBR    = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  provider._overview       = async () => ({ Character: 'Brahiem', Corporation: 'Test Corp' });
+  provider._topAssetSystem = async () => '';
+  // Corp-scoped stats: 3 FATs under the main, 2 under an alt, 9 under a stranger
+  // (not on this corp's roster → must be ignored). Only the current month has data.
+  provider._fatMonth = async (corpId, y, m) =>
+    (y === now.getFullYear() && m === now.getMonth() + 1)
+      ? { Brahiem: 3, BrahiemAlt1: 2, Stranger: 9 }
+      : {};
+
+  await provider.enrich(chars, 99, 'Test Corp', now.getFullYear(), () => {});
+
+  const k = `${now.getFullYear()}-${ABBR[now.getMonth()]}`;
+  check('totalFats = 5 (3 own + 2 alt, stranger ignored)', brahiem.totalFats, 5);
+  check('current-month FAT includes the alt',              brahiem.fatsByMonth[k], 5);
+}
+
 // ── Run ───────────────────────────────────────────────────────────────────────
 (async () => {
   try {
     await testBuildAltCountMap();
     await testEnrichPreservesAltCount();
+    await testAltFatRollup();
     console.log('\n✓ All tests passed\n');
   } catch (e) {
     console.error('\n✗ FAILED:', e.message, '\n');
