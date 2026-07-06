@@ -32,8 +32,4 @@ function makeCharacter(pk, name) {
   };
 }
 
-function makeCorp(corpId, name) {
-  return { corpId, name, members: [] };
-}
-
-module.exports = { makeCharacter, makeCorp };
+module.exports = { makeCharacter };
