@@ -327,6 +327,7 @@ class AllianceAuthProvider extends BaseProvider {
     const pkByName  = new Map();  // norm(name) → Auth PK
     const nameByPk  = new Map();  // Auth PK    → norm(name)
     const eveIdToPk = new Map();  // EVE ID     → Auth PK
+    const charToMainPk = new Map(); // norm(char's own name) → its main's Auth PK
     let mainRows = 0;
     for (const r of all) {
       if (r.length < 13 || r[10] !== 'yes') continue;
@@ -335,7 +336,7 @@ class AllianceAuthProvider extends BaseProvider {
       const eveId = parseInt(r[12]) || null;
       if (authPk) {
         nameByPk.set(authPk, norm(name));
-        if (name) pkByName.set(norm(name), authPk);
+        if (name) { pkByName.set(norm(name), authPk); charToMainPk.set(norm(name), authPk); }
       }
       if (eveId && authPk) eveIdToPk.set(eveId, authPk);
     }
@@ -350,6 +351,7 @@ class AllianceAuthProvider extends BaseProvider {
       if (r.length < 13 || r[10] === 'yes') continue;
       altRows++;
 
+      const [, ownAltName] = this._parseNameCell(r[0] || '');
       const [mainAuthPk, anchorName] = this._parseNameCell(r[2] || '');
       const mainEveId   = eveIdFromImgSrc(r[2] || '');
       const mainNameRaw = anchorName || stripHtml(r[2] || '');
@@ -369,6 +371,7 @@ class AllianceAuthProvider extends BaseProvider {
         byPk.set(pk, (byPk.get(pk) || 0) + 1);
         const nm = nameByPk.get(pk) || mainName;
         if (nm) byName.set(nm, (byName.get(nm) || 0) + 1);
+        if (ownAltName) charToMainPk.set(norm(ownAltName), pk);
       } else if (mainName) {
         byName.set(mainName, (byName.get(mainName) || 0) + 1);
       }
@@ -377,6 +380,7 @@ class AllianceAuthProvider extends BaseProvider {
     this._altMapCache = {
       byPk,
       byName,
+      charToMainPk,
       diag: { totalRows: all.length, mainRows, altRows, viaPk, viaEveId, viaName, unresolved, unresolvedSamples },
     };
     return this._altMapCache;
@@ -406,7 +410,7 @@ class AllianceAuthProvider extends BaseProvider {
     // freshly-initialised makeCharacter() (altCount:0) onto each ch, so any
     // altCount set before that loop would be silently reset to zero.
     log(`      building alt counts…`, 'grey');
-    const { byPk: altByPk, byName: altByName, diag } = await this._buildAltCountMap();
+    const { byPk: altByPk, byName: altByName, charToMainPk, diag } = await this._buildAltCountMap();
     const normName = (s) => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
     let matchedPk = 0, matchedName = 0, zero = 0;
     for (const ch of chars) {
@@ -442,23 +446,29 @@ class AllianceAuthProvider extends BaseProvider {
       fatMap.set(`${y}:${m}`, await this._fatMonth(corpId, y, m));
     })));
 
-    const byName = Object.fromEntries(chars.map(ch => [ch.name, ch]));
+    // Roll each character's FATs up to its main. The corp stats page lists one
+    // row per character (mains AND alts); charToMainPk maps every character name
+    // to its main's Auth PK, so an alt's PAPs count toward its main. The page is
+    // corp-scoped, so only same-corp characters appear here — alts in another
+    // corp are never counted. Falls back to a direct name match so a main's own
+    // FATs still land even if PK resolution misses.
+    const byPk       = new Map(chars.map(ch => [ch.pk, ch]));
+    const byCharName = new Map(chars.map(ch => [normName(ch.name), ch]));
     for (let y = year - 2; y <= year; y++) {
-      const maxM      = y < today.getFullYear() ? 12 : today.getMonth() + 1;
-      const yearTotals = {};
+      const maxM       = y < today.getFullYear() ? 12 : today.getMonth() + 1;
+      const yearTotals = new Map();  // main pk → total
       for (let m = 1; m <= maxM; m++) {
         for (const [charName, cnt] of Object.entries(fatMap.get(`${y}:${m}`) || {})) {
-          yearTotals[charName] = (yearTotals[charName] || 0) + cnt;
-          const ch = byName[charName];
-          if (ch) {
-            const k = `${y}-${MONTH_ABBRS[m - 1]}`;
-            ch.fatsByMonth[k] = (ch.fatsByMonth[k] || 0) + cnt;
-          }
+          const mainPk = charToMainPk.get(normName(charName));
+          const ch = (mainPk != null && byPk.get(mainPk)) || byCharName.get(normName(charName));
+          if (!ch) continue;   // main not on this corp's roster — skip
+          yearTotals.set(ch.pk, (yearTotals.get(ch.pk) || 0) + cnt);
+          const k = `${y}-${MONTH_ABBRS[m - 1]}`;
+          ch.fatsByMonth[k] = (ch.fatsByMonth[k] || 0) + cnt;
         }
       }
-      for (const [charName, total] of Object.entries(yearTotals)) {
-        const ch = byName[charName];
-        if (ch) ch.fatsByYear[y] = (ch.fatsByYear[y] || 0) + total;
+      for (const [pk, total] of yearTotals) {
+        byPk.get(pk).fatsByYear[y] = (byPk.get(pk).fatsByYear[y] || 0) + total;
       }
     }
     for (const ch of chars) {
