@@ -1,10 +1,8 @@
 'use strict';
 
-const { makeCorp } = require('./models');
-
 async function collectCorp(auth, esi, extraProviders, corpId, corpName, year, log = console.log) {
   log(`  [+] Collecting ${corpName} (ID ${corpId})…`, 'cyan');
-  const corp    = makeCorp(corpId, corpName);
+  const corp    = { corpId, name: corpName, members: [] };
   const members = await auth.listCorpMembers(corpName);
   log(`      found ${members.length} mains`, 'grey');
   if (!members.length) return corp;
